@@ -1,0 +1,210 @@
+const BASE_URL = 'http://localhost:5001/api';
+
+const getHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+};
+
+const handleResponse = async (res) => {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Request failed');
+    return data;
+};
+
+// Upload a file — returns { url, filename, ... }
+export const apiUploadFile = async (file, folder = 'general') => {
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${BASE_URL}/upload/${folder}`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+    });
+    return handleResponse(res);
+};
+
+
+
+// ─── Auth ─────────────────────────────────────────────────────
+export const apiLogin = async (email, password) => {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetMe = async () => {
+    const res = await fetch(`${BASE_URL}/auth/me`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+// ─── Requests ─────────────────────────────────────────────────
+export const apiGetRequests = async (filters = {}) => {
+    const params = new URLSearchParams(filters).toString();
+    const res = await fetch(`${BASE_URL}/requests?${params}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetRequestStats = async () => {
+    const res = await fetch(`${BASE_URL}/requests/stats`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetRequestById = async (id) => {
+    const res = await fetch(`${BASE_URL}/requests/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateRequest = async (data) => {
+    const res = await fetch(`${BASE_URL}/requests`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiUpdateRequestStatus = async (id, status, remarks) => {
+    const res = await fetch(`${BASE_URL}/requests/${id}/status`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ status, remarks }),
+    });
+    return handleResponse(res);
+};
+
+// ─── Students ─────────────────────────────────────────────────
+export const apiGetStudentsByRequest = async (requestId) => {
+    const res = await fetch(`${BASE_URL}/students/request/${requestId}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiBulkCreateStudents = async (students, tenant_id, request_id) => {
+    const res = await fetch(`${BASE_URL}/students/bulk`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ students, tenant_id, request_id }),
+    });
+    return handleResponse(res);
+};
+
+export const apiAddStudent = async (data) => {
+    const res = await fetch(`${BASE_URL}/students`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiDeleteStudent = async (id) => {
+    const res = await fetch(`${BASE_URL}/students/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+    });
+    return handleResponse(res);
+};
+
+
+// ─── Samples ─────────────────────────────────────────────────
+export const apiGetSamplesByRequest = async (requestId) => {
+    const res = await fetch(`${BASE_URL}/samples/request/${requestId}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateSample = async (data) => {
+    const res = await fetch(`${BASE_URL}/samples`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+// ─── Approvals ────────────────────────────────────────────────
+export const apiGetApprovalsByRequest = async (requestId) => {
+    const res = await fetch(`${BASE_URL}/approvals/request/${requestId}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetTimeline = async (requestId) => {
+    const res = await fetch(`${BASE_URL}/approvals/timeline/${requestId}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateApproval = async (data) => {
+    const res = await fetch(`${BASE_URL}/approvals`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+// ─── Tenants ─────────────────────────────────────────────────
+export const apiGetTenants = async () => {
+    const res = await fetch(`${BASE_URL}/tenants`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateTenant = async (data) => {
+    const res = await fetch(`${BASE_URL}/tenants`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiUpdateTenant = async (id, data) => {
+    const res = await fetch(`${BASE_URL}/tenants/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+// ─── Users ────────────────────────────────────────────────────
+export const apiGetUsers = async () => {
+    const res = await fetch(`${BASE_URL}/users`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetAdminStats = async () => {
+    const res = await fetch(`${BASE_URL}/users/stats`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateUser = async (data) => {
+    const res = await fetch(`${BASE_URL}/users`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiUpdateUser = async (id, data) => {
+    const res = await fetch(`${BASE_URL}/users/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiResetUserPassword = async (id, password) => {
+    const res = await fetch(`${BASE_URL}/users/${id}/reset-password`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ password }),
+    });
+    return handleResponse(res);
+};
