@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { apiGetRequestById, apiCreateApproval, apiCreateSample, apiUploadFile } from "../../utils/api";
+import { apiGetRequestById, apiCreateApproval, apiCreateSample, apiUploadFile, apiDispatchRequest } from "../../utils/api";
 import {
     ArrowLeft, FileText, Users, Image, Clock, RefreshCw,
     CheckCircle, XCircle, AlertCircle, Upload, Loader2, Check,
-    ChevronRight, User
+    ChevronRight, User, Send
 } from "lucide-react";
 
 const BASE = "http://localhost:5001";
@@ -20,22 +20,21 @@ const STATUS_CFG = {
     SCHOOL_VERIFIED: { label: "School Verified", color: "bg-teal-50 text-teal-700", step: 4 },
     GMMC_VERIFIED: { label: "GMMC Verified", color: "bg-cyan-50 text-cyan-700", step: 5 },
     BULK_PRINT_APPROVED: { label: "Print Approved", color: "bg-green-50 text-green-700", step: 6 },
+    DISPATCHED: { label: "Dispatched", color: "bg-blue-600 text-white", step: 7 },
 };
 
-const STEPS = ["Submitted", "GMMC Review", "Printer Review", "Sample Upload", "School Verify", "GMMC Final", "Print Approved"];
+const STEPS = ["Submitted", "GMMC Review", "Printer Review", "Sample Upload", "School Verified", "GMMC Final", "Print Approved", "Dispatched"];
 
-// What action can this role take given current status?
-// Uses MAPPED roles: admin, printer, school (AuthContext normalises GMMC_ADMIN→admin etc.)
 const getAction = (role, status) => {
     if (role === "admin" && status === "SUBMITTED") return { stage: "GMMC", type: "review" };
     if (role === "admin" && status === "SCHOOL_VERIFIED") return { stage: "FINAL", type: "review" };
     if (role === "printer" && status === "GMMC_APPROVED") return { stage: "PRINTER", type: "review" };
     if (role === "printer" && status === "PRINTER_APPROVED") return { stage: "PRINTER", type: "sample" };
     if (role === "school" && status === "SAMPLE_UPLOADED") return { stage: "SCHOOL", type: "review" };
+    if (role === "printer" && status === "BULK_PRINT_APPROVED") return { stage: "DISPATCH", type: "dispatch" };
     return null;
 };
 
-// ── Tiny image uploader used for samples ─────────────────────────────────────
 function SampleImagePicker({ label, value, onChange }) {
     const ref = useRef();
     const [busy, setBusy] = useState(false);
@@ -70,7 +69,6 @@ function SampleImagePicker({ label, value, onChange }) {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function RequestDetail() {
     const { id } = useParams();
     const { user } = useAuth();
@@ -84,11 +82,12 @@ export default function RequestDetail() {
     const [comments, setComments] = useState("");
     const [sampleF, setSampleF] = useState("");
     const [sampleB, setSampleB] = useState("");
+    const [trackingInfo, setTrackingInfo] = useState("");
 
     const load = async () => {
         setLoading(true);
         try { const r = await apiGetRequestById(id); setRequest(r.data); }
-        catch { /* handled below */ }
+        catch { /* Error handled by UI check */ }
         finally { setLoading(false); }
     };
     useEffect(() => { load(); }, [id]);
@@ -97,7 +96,6 @@ export default function RequestDetail() {
     const cfg = STATUS_CFG[request?.current_status] || { label: request?.current_status, color: "bg-gray-100 text-gray-600", step: 0 };
     const step = cfg.step;
 
-    // ── Approval / rejection ─────────────────────────────────────
     const doApproval = async (verdict) => {
         setBusy(true); setMsg(null);
         try {
@@ -109,7 +107,6 @@ export default function RequestDetail() {
         finally { setBusy(false); }
     };
 
-    // ── Sample upload (printer uploads sample card images) ───────
     const doSample = async () => {
         if (!sampleF || !sampleB) { setMsg({ ok: false, text: "Upload both front and back images." }); return; }
         setBusy(true); setMsg(null);
@@ -120,6 +117,20 @@ export default function RequestDetail() {
             await load();
         } catch (e) { setMsg({ ok: false, text: e.message }); }
         finally { setBusy(false); }
+    };
+
+    const doDispatch = async () => {
+    if (!trackingInfo) { setMsg({ ok: false, text: "Please enter tracking information." }); return;}
+    setBusy(true); setMsg(null);
+    try {
+        await apiDispatchRequest(parseInt(id), trackingInfo);
+        await apiCreateApproval({ request_id: parseInt(id), action: "APPROVED", action_stage: "DISPATCH", comments: `Dispatched: ${trackingInfo}` 
+        });
+        setMsg({ ok: true, text: "Cards marked as dispatched!" });
+        setTrackingInfo(""); 
+        await load();
+    } catch (e) { setMsg({ ok: false, text: e.message }); }
+    finally { setBusy(false); }
     };
 
     if (loading) return (
@@ -145,8 +156,6 @@ export default function RequestDetail() {
 
     return (
         <div className="p-6 max-w-5xl mx-auto space-y-5">
-
-            {/* Header */}
             <div className="flex items-center gap-3">
                 <button onClick={() => navigate("/idcard/requests")} className="text-gray-400 hover:text-gray-700 transition-colors">
                     <ArrowLeft size={19} />
@@ -163,7 +172,6 @@ export default function RequestDetail() {
                 <button onClick={load} className="text-gray-400 hover:text-gray-700 transition-colors"><RefreshCw size={16} /></button>
             </div>
 
-            {/* Workflow progress bar */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center">
                     {STEPS.map((s, i) => (
@@ -186,7 +194,6 @@ export default function RequestDetail() {
                 </div>
             </div>
 
-            {/* ── ACTION PANEL — shown prominently when role has pending action ── */}
             {action && (
                 <div className={`border-2 rounded-xl p-5 ${action.type === "sample" ? "border-purple-200 bg-purple-50" : "border-amber-200 bg-amber-50"}`}>
                     <div className="flex items-center gap-2 mb-4">
@@ -203,6 +210,7 @@ export default function RequestDetail() {
                                 {action.stage === "PRINTER" && action.type === "sample" && "Upload front and back sample images of the ID card."}
                                 {action.stage === "SCHOOL" && "Review the sample uploaded by the printer and verify."}
                                 {action.stage === "FINAL" && "Final GMMC approval before bulk printing begins."}
+                                {action.stage === "DISPATCH" && "Provide shipping details to complete the request."}
                             </p>
                         </div>
                     </div>
@@ -214,7 +222,6 @@ export default function RequestDetail() {
                         </div>
                     )}
 
-                    {/* ── Sample upload (Printer uploads card images) */}
                     {action.type === "sample" && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -229,7 +236,6 @@ export default function RequestDetail() {
                         </div>
                     )}
 
-                    {/* ── Approve / Reject */}
                     {action.type === "review" && (
                         <div className="space-y-3">
                             <div>
@@ -252,10 +258,25 @@ export default function RequestDetail() {
                             </div>
                         </div>
                     )}
+                    
+                    {action.type === "dispatch" && (
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Tracking Information</label>
+                                <textarea rows={2} value={trackingInfo} onChange={(e) => setTrackingInfo(e.target.value)}
+                                    placeholder="Enter tracking number or delivery details..."
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 resize-none bg-white" />
+                            </div>
+                            <button onClick={doDispatch} disabled={busy}
+                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors">
+                                {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                                Mark as Dispatched
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* Tabs */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="flex border-b border-gray-100">
                     {[
@@ -273,7 +294,6 @@ export default function RequestDetail() {
                 </div>
 
                 <div className="p-5">
-                    {/* ── Overview ── */}
                     {tab === "overview" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
@@ -312,10 +332,16 @@ export default function RequestDetail() {
                                     <div className="flex justify-between"><span className="text-gray-500">School</span><span className="font-medium text-gray-800">{request.tenant_name}</span></div>
                                 </div>
                             </div>
+
+                            {request.tracking_info && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Tracking Details</p>
+                                <p className="text-sm font-medium text-gray-800">{request.tracking_info}</p>
+                            </div>
+                            )}
                         </div>
                     )}
 
-                    {/* ── Students ── */}
                     {tab === "students" && (
                         request.students?.length === 0
                             ? <p className="text-sm text-gray-400 text-center py-8">No students in this request.</p>
@@ -346,7 +372,6 @@ export default function RequestDetail() {
                             </table>
                     )}
 
-                    {/* ── Samples ── */}
                     {tab === "samples" && (
                         request.samples?.length === 0
                             ? <p className="text-sm text-gray-400 text-center py-8">No samples uploaded yet.</p>
@@ -376,7 +401,6 @@ export default function RequestDetail() {
                             </div>
                     )}
 
-                    {/* ── Timeline ── */}
                     {tab === "timeline" && (
                         request.approvals?.length === 0
                             ? <p className="text-sm text-gray-400 text-center py-8">No actions taken yet.</p>

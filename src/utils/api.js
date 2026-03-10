@@ -79,6 +79,18 @@ export const apiUpdateRequestStatus = async (id, status, remarks) => {
     return handleResponse(res);
 };
 
+export const apiDispatchRequest = async (id, trackingInfo) => {
+    const res = await fetch(`${BASE_URL}/requests/${id}/dispatch`, {
+        method: 'PATCH',
+        headers: getHeaders(), // Ensure getHeaders() handles JSON content-type
+        body: JSON.stringify({ 
+            status: 'DISPATCHED', 
+            tracking_info: trackingInfo 
+        }),
+    });
+    return handleResponse(res);
+};
+
 // ─── Students ─────────────────────────────────────────────────
 export const apiGetStudentsByRequest = async (requestId) => {
     const res = await fetch(`${BASE_URL}/students/request/${requestId}`, { headers: getHeaders() });

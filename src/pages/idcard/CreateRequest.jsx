@@ -490,7 +490,7 @@ export default function CreateRequest() {
                                 <FileSpreadsheet size={16} className="text-emerald-600" />
                                 <p className="text-sm font-semibold text-gray-800">Option B — Upload Excel File</p>
                             </div>
-                            <button onClick={downloadTemplate} className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 transition-colors">
+                            <button onClick={downloadTemplate} className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors">
                                 <Download size={12} /> Download Template
                             </button>
                         </div>
