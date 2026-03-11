@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  /* Custom Scrollbar for Classy Feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-100 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-200;
+  }
+}
+
+/* Minimalist Transitions */
+.page-transition {
+  @apply transition-all duration-700 ease-in-out;
+}
+
+/* Classy Shadow */
+.classy-shadow {
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.02);
+}
+
+/* Custom Typography spacing */
+h1, h2, h3, h4 {
+  @apply tracking-tighter;
+}

@@ -9,7 +9,7 @@ export default {
         background: "#f8fafc", // Slate 50
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
       },
     },
   },

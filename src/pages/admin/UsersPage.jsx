@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { apiGetUsers, apiGetTenants, apiCreateUser, apiUpdateUser, apiResetUserPassword } from "../../utils/api";
 import { Plus, Search, Pencil, Key, Loader2, X, Check } from "lucide-react";
 
-const ROLES = ["GMMC_ADMIN", "SCHOOL_ADMIN", "PRINTER"];
-const ROLE_LABELS = { GMMC_ADMIN: "GMMC Admin", SCHOOL_ADMIN: "School Admin", PRINTER: "Printer" };
-const ROLE_COLORS = { GMMC_ADMIN: "bg-indigo-50 text-indigo-700", SCHOOL_ADMIN: "bg-blue-50 text-blue-700", PRINTER: "bg-purple-50 text-purple-700" };
+const ROLES = ["GMMC_ADMIN", "SCHOOL_ADMIN", "PRINTER", "AGENT"];
+const ROLE_LABELS = { GMMC_ADMIN: "GMMC Admin", SCHOOL_ADMIN: "School Admin", PRINTER: "Printer", AGENT: "Agent" };
+const ROLE_COLORS = { GMMC_ADMIN: "bg-indigo-50 text-indigo-700", SCHOOL_ADMIN: "bg-blue-50 text-blue-700", PRINTER: "bg-purple-50 text-purple-700", AGENT: "bg-green-50 text-green-700" };
 
 const EMPTY = { full_name: "", email: "", phone: "", password: "", role: "SCHOOL_ADMIN", tenant_id: "", status: "ACTIVE" };
 

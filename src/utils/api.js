@@ -220,3 +220,69 @@ export const apiResetUserPassword = async (id, password) => {
     });
     return handleResponse(res);
 };
+
+// ─── Marketing ───────────────────────────────────────────────
+export const apiGetMarketingSchools = async () => {
+    const res = await fetch(`${BASE_URL}/marketing/schools`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateMarketingSchool = async (data) => {
+    const res = await fetch(`${BASE_URL}/marketing/schools`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetMarketingSchoolDetail = async (id) => {
+    const res = await fetch(`${BASE_URL}/marketing/schools/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiUpdateMarketingSchool = async (id, data) => {
+    const res = await fetch(`${BASE_URL}/marketing/schools/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiAssignSchool = async (data) => {
+    const res = await fetch(`${BASE_URL}/marketing/assign`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiLogMarketingActivity = async (data) => {
+    const res = await fetch(`${BASE_URL}/marketing/activities`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetMyMarketingActivities = async () => {
+    const res = await fetch(`${BASE_URL}/marketing/activities/my`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetPendingFollowUps = async () => {
+    const res = await fetch(`${BASE_URL}/marketing/activities/followups`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiUpdateActivityStatus = async (id, status) => {
+    const res = await fetch(`${BASE_URL}/marketing/activities/${id}/status`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ status }),
+    });
+    return handleResponse(res);
+};

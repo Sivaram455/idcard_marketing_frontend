@@ -14,6 +14,10 @@ import FollowUps from "../pages/marketing/FollowUps";
 import SchoolVisits from "../pages/marketing/Visits";
 import Messages from "../pages/marketing/Messages";
 import Profile from "../pages/marketing/profile";
+import AddLead from "../pages/marketing/AddLead";
+import MarketingLeads from "../pages/marketing/MarketingLeads";
+import SchoolDetail from "../pages/marketing/SchoolDetail";
+import AssignLeads from "../pages/marketing/AssignLeads";
 
 import AdminPortal from "../pages/AdminPortal";
 
@@ -48,9 +52,13 @@ export default function AppRoutes() {
       </Route>
 
       {/* Marketing routes */}
-      <Route element={<ProtectedRoute allowedRoles={["marketer", "admin", "GMMC_ADMIN"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["marketer", "agent", "admin", "GMMC_ADMIN"]} />}>
         <Route element={<MarketingLayout />}>
           <Route path="/marketing" element={<MarketingDashboard />} />
+          <Route path="/marketing/leads" element={<MarketingLeads />} />
+          <Route path="/marketing/add" element={<AddLead />} />
+          <Route path="/marketing/schools/:id" element={<SchoolDetail />} />
+          <Route path="/marketing/assign" element={<AssignLeads />} />
           <Route path="/marketing/visits" element={<SchoolVisits />} />
           <Route path="/marketing/followups" element={<FollowUps />} />
           <Route path="/marketing/messages" element={<Messages />} />

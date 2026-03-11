@@ -11,6 +11,7 @@ export const loginUser = async (email, password) => {
       if (user.role === 'GMMC_ADMIN') role = 'admin';
       else if (user.role === 'PRINTER') role = 'printer';
       else if (user.role === 'SCHOOL_ADMIN') role = 'school';
+      else if (user.role === 'AGENT') role = 'agent';
 
       // Store the token AND the mapped user (with frontend role)
       const mappedUser = { ...user, role };

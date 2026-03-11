@@ -1,58 +1,120 @@
-import { School, Users, User, MapPin, Send } from "lucide-react";
+import { useState } from "react";
+import { apiCreateMarketingSchool } from "../../utils/api";
+import { useToast } from "../../components/common/Toast";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 
 export default function AddLead() {
-  return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-800">Add New School</h1>
-        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Enter School Details</p>
-      </div>
+    const toast = useToast();
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        school_name: "",
+        contact_person1: "",
+        contact_person2: "",
+        mobile: "",
+        email: "",
+        address: "",
+        city: "",
+        state: "",
+        comments: ""
+    });
 
-      <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100">
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">School Name</label>
-            <div className="relative">
-              <School className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
-              <input type="text" placeholder="Full School Name" className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-500/10 font-bold" />
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await apiCreateMarketingSchool(formData);
+            toast.success("Lead registered successfully!");
+            setTimeout(() => navigate('/marketing/leads'), 1000);
+        } catch (err) {
+            toast.error(err.message || "Failed to register lead");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const InputField = ({ label, name, type = "text", placeholder, required }) => (
+        <div className="space-y-1.5 focus-within:text-indigo-600 transition-colors">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <input 
+                required={required}
+                name={name}
+                value={formData[name]}
+                onChange={handleChange}
+                type={type} 
+                className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-600 focus:bg-white transition-all outline-none shadow-sm"
+                placeholder={placeholder} 
+            />
+        </div>
+    );
+
+    return (
+        <div className="max-w-2xl mx-auto space-y-10 animate-in fade-in duration-500">
+            <div className="flex items-center gap-4">
+                <button onClick={() => navigate(-1)} className="p-2 border border-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors">
+                    <ChevronLeft size={18} />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Register New Lead</h1>
+                    <p className="text-sm text-gray-500 mt-1">Add a prospective school to your marketing pipeline.</p>
+                </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Board</label>
-            <select className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none">
-              <option>CBSE</option>
-              <option>ICSE</option>
-              <option>State Board</option>
-            </select>
-          </div>
+            <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                        <InputField label="School Name" name="school_name" placeholder="Name of school" required />
+                    </div>
+                    <InputField label="Primary Contact" name="contact_person1" placeholder="Lead name" required />
+                    <InputField label="Secondary Contact" name="contact_person2" placeholder="Alternate name" />
+                    <InputField label="Mobile Number" name="mobile" placeholder="Phone number" />
+                    <InputField label="Email Address" name="email" type="email" placeholder="Email contact" />
+                    <InputField label="City" name="city" placeholder="City" />
+                    <InputField label="State" name="state" placeholder="State" />
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Student Strength</label>
-            <div className="relative">
-              <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
-              <input type="number" placeholder="Total Students" className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none font-bold" />
-            </div>
-          </div>
+                <div className="space-y-4 pt-4 border-t border-gray-50">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">Address</label>
+                        <textarea 
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            rows="2" 
+                            className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-600 transition-all outline-none resize-none shadow-sm"
+                            placeholder="Full address of the school"
+                        ></textarea>
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">Comments</label>
+                        <textarea 
+                            name="comments"
+                            value={formData.comments}
+                            onChange={handleChange}
+                            rows="2" 
+                            className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-600 transition-all outline-none resize-none shadow-sm"
+                            placeholder="Notes or context..."
+                        ></textarea>
+                    </div>
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Contact Person</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
-              <input type="text" placeholder="Principal Name" className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none font-bold" />
-            </div>
-          </div>
-
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Address</label>
-            <textarea rows="3" className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold" placeholder="School Location..."></textarea>
-          </div>
-
-          <button className="md:col-span-2 bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs">
-            <Send size={18} /> Register Lead
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+                <div className="pt-4 flex justify-end">
+                    <button 
+                        disabled={loading}
+                        type="submit"
+                        className="bg-gray-900 text-white font-semibold py-3 px-8 rounded-xl shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                    >
+                        {loading ? "Registering..." : "Submit Lead"}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
 }

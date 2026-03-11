@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../auth/authService";
 import { useAuth } from "../auth/AuthContext";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Shield } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,12 +13,11 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, user } = useAuth();
 
-  // Auto-redirect if already logged in
   useEffect(() => {
     if (user) {
       const role = user.role;
       if (role === "admin" || role === "GMMC_ADMIN") navigate("/admin-portal");
-      else if (role === "marketer") navigate("/marketing");
+      else if (role === "marketer" || role === "agent") navigate("/marketing");
       else if (role === "printer" || role === "PRINTER") navigate("/idcard/requests");
       else navigate("/idcard/dashboard");
     }
@@ -31,60 +30,58 @@ export default function Login() {
     try {
       const result = await loginUser(email, password);
       if (!result.success) {
-        setError(result.message || "Invalid email or password.");
+        setError(result.message || "Invalid credentials.");
         return;
       }
       login(result.user);
       const role = result.user?.role;
       if (role === "admin" || role === "GMMC_ADMIN") navigate("/admin-portal");
-      else if (role === "marketer") navigate("/marketing");
+      else if (role === "marketer" || role === "agent") navigate("/marketing");
       else if (role === "printer" || role === "PRINTER") navigate("/idcard/requests");
       else navigate("/idcard/dashboard");
     } catch {
-      setError("Cannot connect to server. Make sure the backend is running.");
+      setError("Server connection failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo area */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 antialiased">
+      <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Branding */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-100 mb-6">
+            <Shield className="text-white" size={24} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">GMMC PORTAL</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
+          <p className="text-slate-500 text-sm mt-1">Please enter your details to continue.</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+        {/* Login Card */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+            <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold text-center">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
               <input
                 type="email"
                 required
-                placeholder="you@example.com"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
               <div className="relative">
                 <input
                   type={showPwd ? "text" : "password"}
@@ -92,14 +89,14 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -107,16 +104,15 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-md shadow-indigo-100 disabled:opacity-50 mt-4"
             >
-              {loading && <Loader2 size={15} className="animate-spin" />}
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign in to portal"}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Access restricted to authorised personnel only.
+        <p className="mt-8 text-center text-xs text-slate-400 font-medium">
+          Authorized personnel only. Secure connection.
         </p>
       </div>
     </div>
