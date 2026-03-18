@@ -6,7 +6,8 @@ import {
   Truck, 
   LogOut,
   ChevronRight,
-  CreditCard
+  CreditCard,
+  Ticket
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -26,7 +27,7 @@ export default function Sidebar() {
     { path: "/orders", label: "Order History", icon: History },
     { path: "/payments", label: "Make Payment", icon: CreditCard },
     { path: "/track", label: "Track Order", icon: Truck },
-
+    { path: "/ticketing", label: "Support", icon: Ticket },
   ];
 
   return (

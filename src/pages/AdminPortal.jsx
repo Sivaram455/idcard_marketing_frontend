@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { CreditCard, Megaphone, ShieldCheck, LogOut, ChevronRight, Layers } from "lucide-react";
+import { CreditCard, Megaphone, ShieldCheck, LogOut, ChevronRight, Layers, Ticket } from "lucide-react";
 
 export default function AdminPortal() {
     const { user, logout } = useAuth();
@@ -28,6 +28,17 @@ export default function AdminPortal() {
             hoverRing: "hover:ring-rose-100",
             title: "Marketing Portal",
             desc: "Track daily school visits, follow-up timelines, and overall campaign activity.",
+        },
+        {
+            key: "ticketing",
+            route: "/ticketing",
+            icon: Ticket,
+            color: "text-amber-600",
+            bg: "bg-amber-50",
+            gradient: "from-amber-500 to-amber-600",
+            hoverRing: "hover:ring-amber-100",
+            title: "Support Desk",
+            desc: "Technical ticketing system to report bugs, request features or database help.",
         },
         {
             key: "admin",
@@ -85,7 +96,7 @@ export default function AdminPortal() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full px-4 sm:px-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl px-4 sm:px-0">
                     {portals.map(({ key, route, icon: Icon, color, bg, gradient, hoverRing, title, desc }) => (
                         <button
                             key={key}

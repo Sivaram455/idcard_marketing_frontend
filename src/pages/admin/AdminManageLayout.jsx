@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { LayoutDashboard, Building2, Users, LogOut, CreditCard, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Building2, Users, LogOut, CreditCard, ArrowLeft, Ticket } from "lucide-react";
 
 const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
@@ -58,6 +58,7 @@ export default function AdminManageLayout() {
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 pt-3 pb-1">Management</p>
                     <NavItem to="/admin/tenants" icon={Building2} label="Tenants" />
                     <NavItem to="/admin/users" icon={Users} label="Users & Roles" />
+                    <NavItem to="/ticketing" icon={Ticket} label="Support Desk" />
                 </aside>
 
                 {/* Page content */}

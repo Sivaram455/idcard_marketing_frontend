@@ -35,6 +35,12 @@ import RequestDetail from "../pages/idcard/RequestDetail";
 import CreateRequest from "../pages/idcard/CreateRequest";
 import StudentsPage from "../pages/idcard/StudentsPage";
 
+// Ticketing module
+import TicketingLayout from "../pages/ticketing/TicketingLayout";
+import TicketingDashboard from "../pages/ticketing/TicketingDashboard";
+import CreateTicket from "../pages/ticketing/CreateTicket";
+import TicketDetails from "../pages/ticketing/TicketDetails";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -88,6 +94,16 @@ export default function AppRoutes() {
           <Route path="/idcard/requests/:id" element={<RequestDetail />} />
           <Route path="/idcard/requests/:requestId/students" element={<StudentsPage />} />
           <Route path="/idcard/create-request" element={<CreateRequest />} />
+        </Route>
+      </Route>
+
+      {/* Ticketing Portal — all roles can create, technical roles manage */}
+      <Route element={<ProtectedRoute allowedRoles={["school", "SCHOOL_ADMIN", "admin", "GMMC_ADMIN", "SUPPORT", "DEVELOPER"]} />}>
+        <Route element={<TicketingLayout />}>
+          <Route path="/ticketing" element={<TicketingDashboard />} />
+          <Route path="/ticketing/list" element={<TicketingDashboard />} />
+          <Route path="/ticketing/new" element={<CreateTicket />} />
+          <Route path="/ticketing/:id" element={<TicketDetails />} />
         </Route>
       </Route>
 

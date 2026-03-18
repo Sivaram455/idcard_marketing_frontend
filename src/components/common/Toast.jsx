@@ -27,6 +27,7 @@ export const ToastProvider = ({ children }) => {
     toastManager.success = (msg) => addToast(msg, 'success');
     toastManager.error = (msg) => addToast(msg, 'error');
     toastManager.info = (msg) => addToast(msg, 'info');
+    toastManager.showToast = (msg, type) => addToast(msg, type);
   }, [addToast]);
 
   return (

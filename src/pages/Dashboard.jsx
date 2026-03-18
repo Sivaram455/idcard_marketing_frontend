@@ -166,9 +166,9 @@ export default function SchoolDashboard() {
         <div className="space-y-6">
           <div 
             className="bg-white border border-slate-100 rounded-[32px] p-6 hover:border-indigo-200 transition-colors cursor-pointer group shadow-sm h-full flex flex-col justify-center"
-            onClick={() => alert("Connecting you to Support...")}
+            onClick={() => navigate("/ticketing/new")}
           >
-            <h4 className="text-sm font-bold text-slate-800 mb-4">Support Contact</h4>
+            <h4 className="text-sm font-bold text-slate-800 mb-4">Technical Support</h4>
             <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
               <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">AM</div>
               <div>

@@ -17,6 +17,7 @@ export default function Login() {
     if (user) {
       const role = user.role;
       if (role === "admin" || role === "GMMC_ADMIN") navigate("/admin-portal");
+      else if (role === "SUPPORT" || role === "DEVELOPER") navigate("/ticketing");
       else if (role === "marketer" || role === "agent") navigate("/marketing");
       else if (role === "printer" || role === "PRINTER") navigate("/idcard/requests");
       else navigate("/idcard/dashboard");
@@ -36,6 +37,7 @@ export default function Login() {
       login(result.user);
       const role = result.user?.role;
       if (role === "admin" || role === "GMMC_ADMIN") navigate("/admin-portal");
+      else if (role === "SUPPORT" || role === "DEVELOPER") navigate("/ticketing");
       else if (role === "marketer" || role === "agent") navigate("/marketing");
       else if (role === "printer" || role === "PRINTER") navigate("/idcard/requests");
       else navigate("/idcard/dashboard");

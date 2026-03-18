@@ -286,3 +286,37 @@ export const apiUpdateActivityStatus = async (id, status) => {
     });
     return handleResponse(res);
 };
+
+// ─── Ticketing ───────────────────────────────────────────────
+export const apiGetTickets = async () => {
+    const res = await fetch(`${BASE_URL}/ticketing`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetTicketById = async (id) => {
+    const res = await fetch(`${BASE_URL}/ticketing/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateTicket = async (data) => {
+    const res = await fetch(`${BASE_URL}/ticketing`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiUpdateTicket = async (id, data) => {
+    const res = await fetch(`${BASE_URL}/ticketing/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetDevelopers = async () => {
+    const res = await fetch(`${BASE_URL}/ticketing/developers`, { headers: getHeaders() });
+    return handleResponse(res);
+};
