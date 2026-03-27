@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:5001/api';
+const BASE_URL = 'https://supportsmartschoolserp.com/api';
+//const BASE_URL = 'http://localhost:5001/api';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
