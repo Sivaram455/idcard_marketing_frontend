@@ -4,435 +4,407 @@ import { useAuth } from "../../auth/AuthContext";
 import { apiGetRequestById, apiCreateApproval, apiCreateSample, apiUploadFile, apiDispatchRequest } from "../../utils/api";
 import {
     ArrowLeft, FileText, Users, Image, Clock, RefreshCw,
-    CheckCircle, XCircle, AlertCircle, Upload, Loader2, Check,
-    ChevronRight, User, Send
+    CheckCircle, XCircle, AlertCircle, Upload, Loader2, Check, Layers,
+    ChevronRight, User, Send, Plus, Download, FileSpreadsheet, Globe,
+    ShieldCheck, Zap, Search
 } from "lucide-react";
+import AddStudentModal from "./AddStudentModal";
 
 const BASE = "http://localhost:5001";
+const STEPS = ["Submission", "GMMC Review", "Printer Review", "Digital Sample", "School Verify", "Final Verify", "Dispatch"];
 
-const STATUS_CFG = {
-    SUBMITTED: { label: "Submitted", color: "bg-blue-50 text-blue-700", step: 0 },
-    GMMC_APPROVED: { label: "GMMC Approved", color: "bg-indigo-50 text-indigo-700", step: 1 },
-    GMMC_REJECTED: { label: "GMMC Rejected", color: "bg-red-50 text-red-700", step: 1 },
-    PRINTER_APPROVED: { label: "Printer Approved", color: "bg-purple-50 text-purple-700", step: 2 },
-    PRINTER_REJECTED: { label: "Printer Rejected", color: "bg-red-50 text-red-700", step: 2 },
-    SAMPLE_UPLOADED: { label: "Sample Uploaded", color: "bg-amber-50 text-amber-700", step: 3 },
-    SCHOOL_VERIFIED: { label: "School Verified", color: "bg-teal-50 text-teal-700", step: 4 },
-    GMMC_VERIFIED: { label: "GMMC Verified", color: "bg-cyan-50 text-cyan-700", step: 5 },
-    BULK_PRINT_APPROVED: { label: "Print Approved", color: "bg-green-50 text-green-700", step: 6 },
-    DISPATCHED: { label: "Dispatched", color: "bg-blue-600 text-white", step: 7 },
+const STATUS_CONFIG = {
+    SUBMITTED: { label: "Submitted", step: 0, color: "bg-blue-50 text-blue-700 border-blue-200" },
+    GMMC_APPROVED: { label: "GMMC Approved", step: 1, color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+    GMMC_REJECTED: { label: "GMMC Rejected", step: 1, color: "bg-red-50 text-red-700 border-red-200" },
+    PRINTER_APPROVED: { label: "Printer Approved", step: 2, color: "bg-purple-50 text-purple-700 border-purple-200" },
+    PRINTER_REJECTED: { label: "Printer Rejected", step: 2, color: "bg-red-50 text-red-700 border-red-200" },
+    SAMPLE_UPLOADED: { label: "Sample Uploaded", step: 3, color: "bg-amber-50 text-amber-700 border-amber-200" },
+    SCHOOL_VERIFIED: { label: "School Verified", step: 4, color: "bg-teal-50 text-teal-700 border-teal-200" },
+    GMMC_VERIFIED: { label: "GMMC Verified", step: 5, color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+    BULK_PRINT_APPROVED: { label: "Print Approved", step: 6, color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
-
-const STEPS = ["Submitted", "GMMC Review", "Printer Review", "Sample Upload", "School Verified", "GMMC Final", "Print Approved", "Dispatched"];
-
-const getAction = (role, status) => {
-    if (role === "admin" && status === "SUBMITTED") return { stage: "GMMC", type: "review" };
-    if (role === "admin" && status === "SCHOOL_VERIFIED") return { stage: "FINAL", type: "review" };
-    if (role === "printer" && status === "GMMC_APPROVED") return { stage: "PRINTER", type: "review" };
-    if (role === "printer" && status === "PRINTER_APPROVED") return { stage: "PRINTER", type: "sample" };
-    if (role === "school" && status === "SAMPLE_UPLOADED") return { stage: "SCHOOL", type: "review" };
-    if (role === "printer" && status === "BULK_PRINT_APPROVED") return { stage: "DISPATCH", type: "dispatch" };
-    return null;
-};
-
-function SampleImagePicker({ label, value, onChange }) {
-    const ref = useRef();
-    const [busy, setBusy] = useState(false);
-    const handle = async (e) => {
-        const f = e.target.files[0]; if (!f) return;
-        setBusy(true);
-        try { const r = await apiUploadFile(f, "samples"); onChange(r.data.url); }
-        catch { alert("Upload failed"); }
-        finally { setBusy(false); e.target.value = ""; }
-    };
-    return (
-        <div>
-            <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
-            {value ? (
-                <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                    <img src={value.startsWith("http") ? value : `${BASE}${value}`}
-                        alt={label} className="w-full h-32 object-contain" />
-                    <button onClick={() => onChange("")}
-                        className="absolute top-1 right-1 bg-white border border-gray-200 rounded-full p-0.5 text-gray-400 hover:text-red-500">
-                        <XCircle size={14} />
-                    </button>
-                </div>
-            ) : (
-                <button onClick={() => ref.current?.click()} disabled={busy}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-indigo-400 text-gray-400 hover:text-indigo-600 text-xs py-6 rounded-lg transition-all disabled:opacity-60">
-                    {busy ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                    {busy ? "Uploading..." : `Upload ${label}`}
-                </button>
-            )}
-            <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handle} />
-        </div>
-    );
-}
 
 export default function RequestDetail() {
     const { id } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
-
     const [request, setRequest] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [actionBusy, setActionBusy] = useState(false);
     const [tab, setTab] = useState("overview");
-    const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState(null);
+
+    // Form states for actions
     const [comments, setComments] = useState("");
-    const [sampleF, setSampleF] = useState("");
-    const [sampleB, setSampleB] = useState("");
+    const [sampleF, setSampleF] = useState(null);
+    const [sampleB, setSampleB] = useState(null);
     const [trackingInfo, setTrackingInfo] = useState("");
+    const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
 
     const load = async () => {
         setLoading(true);
-        try { const r = await apiGetRequestById(id); setRequest(r.data); }
-        catch { /* Error handled by UI check */ }
-        finally { setLoading(false); }
+        try {
+            const res = await apiGetRequestById(id);
+            setRequest(res.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
+
     useEffect(() => { load(); }, [id]);
 
-    const action = request ? getAction(user?.role, request.current_status) : null;
-    const cfg = STATUS_CFG[request?.current_status] || { label: request?.current_status, color: "bg-gray-100 text-gray-600", step: 0 };
-    const step = cfg.step;
-
-    const doApproval = async (verdict) => {
-        setBusy(true); setMsg(null);
+    const doApproval = async (status) => {
+        setActionBusy(true); setMsg(null);
         try {
-            await apiCreateApproval({ request_id: parseInt(id), action: verdict, action_stage: action.stage, comments });
-            setMsg({ ok: true, text: `${verdict === "APPROVED" ? "Approved" : "Rejected"} successfully.` });
+            await apiCreateApproval({ request_id: id, action: status, comments, action_stage: request.status });
+            setMsg({ ok: true, text: `Protocol confirmed: ${status}` });
             setComments("");
-            await load();
-        } catch (e) { setMsg({ ok: false, text: e.message }); }
-        finally { setBusy(false); }
+            setTimeout(load, 1500);
+        } catch (err) {
+            setMsg({ ok: false, text: err.message });
+        } finally {
+            setActionBusy(false);
+        }
     };
 
     const doSample = async () => {
-        if (!sampleF || !sampleB) { setMsg({ ok: false, text: "Upload both front and back images." }); return; }
-        setBusy(true); setMsg(null);
+        setActionBusy(true); setMsg(null);
         try {
-            await apiCreateSample({ request_id: parseInt(id), sample_front_url: sampleF, sample_back_url: sampleB });
-            setMsg({ ok: true, text: "Sample uploaded. School will verify." });
-            setSampleF(""); setSampleB("");
-            await load();
-        } catch (e) { setMsg({ ok: false, text: e.message }); }
-        finally { setBusy(false); }
+            const fRes = await apiUploadFile(sampleF, "samples");
+            const bRes = await apiUploadFile(sampleB, "samples");
+            await apiCreateSample({ request_id: id, sample_front_url: fRes.data.url, sample_back_url: bRes.data.url });
+            setMsg({ ok: true, text: "Digital assets synchronized." });
+            setSampleF(null); setSampleB(null);
+            setTimeout(load, 1500);
+        } catch (err) {
+            setMsg({ ok: false, text: err.message });
+        } finally {
+            setActionBusy(false);
+        }
     };
 
     const doDispatch = async () => {
-    if (!trackingInfo) { setMsg({ ok: false, text: "Please enter tracking information." }); return;}
-    setBusy(true); setMsg(null);
-    try {
-        await apiDispatchRequest(parseInt(id), trackingInfo);
-        await apiCreateApproval({ request_id: parseInt(id), action: "APPROVED", action_stage: "DISPATCH", comments: `Dispatched: ${trackingInfo}` 
-        });
-        setMsg({ ok: true, text: "Cards marked as dispatched!" });
-        setTrackingInfo(""); 
-        await load();
-    } catch (e) { setMsg({ ok: false, text: e.message }); }
-    finally { setBusy(false); }
+        setActionBusy(true); setMsg(null);
+        try {
+            await apiDispatchRequest({ request_id: id, tracking_info: trackingInfo });
+            setMsg({ ok: true, text: "Logistics initialized." });
+            setTrackingInfo("");
+            setTimeout(load, 1500);
+        } catch (err) {
+            setMsg({ ok: false, text: err.message });
+        } finally {
+            setActionBusy(false);
+        }
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center h-64">
-            <Loader2 size={22} className="animate-spin text-gray-300 mr-3" />
-            <span className="text-sm text-gray-400">Loading request...</span>
+        <div className="flex-1 flex flex-col items-center justify-center p-20 text-slate-400 min-h-screen">
+            <div className="w-16 h-16 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+            <p className="text-sm font-black uppercase tracking-widest animate-pulse">Synchronizing Data Node...</p>
         </div>
     );
+
     if (!request) return (
-        <div className="p-8 text-center">
-            <p className="text-gray-400 text-sm">Request not found.</p>
-            <button onClick={() => navigate("/idcard/requests")} className="mt-3 text-indigo-600 text-sm hover:underline">← Back</button>
+        <div className="p-20 text-center min-h-screen flex flex-col items-center justify-center">
+            <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 text-slate-200"><AlertCircle size={40} /></div>
+            <h3 className="text-xl font-black text-slate-900 italic uppercase">Node Not Found</h3>
+            <button onClick={() => navigate("/idcard/requests")} className="mt-6 px-8 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all">← Back to Archive</button>
         </div>
     );
+
+    const cfg = STATUS_CONFIG[request.status] || { label: request.status, step: 0, color: "bg-slate-50 text-slate-600 border-slate-100" };
+    const step = cfg.step;
+
+    const role = user?.role;
+    let action = null;
+    if (role === "admin" || role === "GMMC_ADMIN") {
+        if (request.status === "SUBMITTED") action = { stage: "GMMC", type: "review" };
+        if (request.status === "SCHOOL_VERIFIED") action = { stage: "GMMC", type: "review" };
+    } else if (role === "printer") {
+        if (request.status === "GMMC_APPROVED") action = { stage: "PRINTER", type: "review" };
+        if (request.status === "PRINTER_APPROVED") action = { stage: "PRINTER", type: "sample" };
+        if (request.status === "GMMC_VERIFIED") action = { stage: "PRINTER", type: "dispatch" };
+    } else if (role === "school") {
+        if (request.status === "SAMPLE_UPLOADED") action = { stage: "SCHOOL", type: "review" };
+    }
 
     const uploadsRaw = [
-        { label: "School Logo", url: request.school_logo_url },
-        { label: "Principal Signature", url: request.principal_signature_url },
-        { label: "Old ID Card Sample", url: request.old_id_card_url },
-        { label: "Excel File", url: request.excel_file_url },
-        { label: "Photos ZIP", url: request.photos_zip_url },
+        { label: "Logo", url: request.school_logo_url },
+        { label: "Sign.", url: request.principal_signature_url },
+        { label: "Sample", url: request.old_id_card_url },
+        { label: "Excel", url: request.excel_file_url },
+        { label: "ZIP", url: request.photos_zip_url },
     ].filter((f) => f.url && f.url !== "");
 
+    const StatCard = ({ label, value, icon: Icon, color }) => (
+        <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
+            <div className="flex items-center gap-2.5">
+                <div className={`p-1.5 rounded-lg ${color} text-white group-hover:scale-110 transition-transform`}>
+                    <Icon size={12} />
+                </div>
+                <div>
+                   <h4 className="text-sm font-black text-slate-900 leading-none">{value}</h4>
+                   <p className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{label}</p>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-5">
-            <div className="flex items-center gap-3">
-                <button onClick={() => navigate("/idcard/requests")} className="text-gray-400 hover:text-gray-700 transition-colors">
-                    <ArrowLeft size={19} />
-                </button>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="text-xl font-bold text-gray-900">{request.request_no}</h1>
-                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                        {request.tenant_name} · by {request.created_by_name || "—"} · {new Date(request.created_at).toLocaleDateString("en-IN")}
-                    </p>
-                </div>
-                <button onClick={load} className="text-gray-400 hover:text-gray-700 transition-colors"><RefreshCw size={16} /></button>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center">
-                    {STEPS.map((s, i) => (
-                        <div key={i} className="flex items-center flex-1 min-w-0">
-                            <div className="flex flex-col items-center flex-shrink-0">
-                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                    ${i < step ? "bg-green-500 text-white"
-                                        : i === step ? "bg-indigo-600 text-white ring-4 ring-indigo-100"
-                                            : "bg-gray-100 text-gray-400"}`}>
-                                    {i < step ? <Check size={12} /> : i + 1}
-                                </div>
-                                <p className={`text-[9px] font-semibold mt-1 text-center leading-tight max-w-[55px]
-                                    ${i <= step ? "text-indigo-700" : "text-gray-300"}`}>{s}</p>
-                            </div>
-                            {i < STEPS.length - 1 && (
-                                <div className={`h-0.5 flex-1 mx-1 mb-4 ${i < step ? "bg-green-400" : "bg-gray-100"}`} />
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {action && (
-                <div className={`border-2 rounded-xl p-5 ${action.type === "sample" ? "border-purple-200 bg-purple-50" : "border-amber-200 bg-amber-50"}`}>
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${action.type === "sample" ? "bg-purple-100" : "bg-amber-100"}`}>
-                            {action.type === "sample" ? <Upload size={16} className="text-purple-600" /> : <AlertCircle size={16} className="text-amber-600" />}
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-800">
-                                {action.type === "sample" ? "Upload ID Card Sample" : `Your review is required — ${action.stage} stage`}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {action.stage === "GMMC" && "Review this request and approve or reject it."}
-                                {action.stage === "PRINTER" && action.type === "review" && "Check if you can print this request."}
-                                {action.stage === "PRINTER" && action.type === "sample" && "Upload front and back sample images of the ID card."}
-                                {action.stage === "SCHOOL" && "Review the sample uploaded by the printer and verify."}
-                                {action.stage === "FINAL" && "Final GMMC approval before bulk printing begins."}
-                                {action.stage === "DISPATCH" && "Provide shipping details to complete the request."}
-                            </p>
-                        </div>
-                    </div>
-
-                    {msg && (
-                        <div className={`flex items-center gap-2 text-sm px-4 py-3 rounded-lg mb-4
-                            ${msg.ok ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"}`}>
-                            {msg.ok ? <Check size={14} /> : <AlertCircle size={14} />} {msg.text}
-                        </div>
-                    )}
-
-                    {action.type === "sample" && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <SampleImagePicker label="Front Side" value={sampleF} onChange={setSampleF} />
-                                <SampleImagePicker label="Back Side" value={sampleB} onChange={setSampleB} />
-                            </div>
-                            <button onClick={doSample} disabled={busy || !sampleF || !sampleB}
-                                className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors">
-                                {busy ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-                                Submit Sample for School Verification
-                            </button>
-                        </div>
-                    )}
-
-                    {action.type === "review" && (
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Comments <span className="text-gray-400">(optional)</span></label>
-                                <textarea rows={2} value={comments} onChange={(e) => setComments(e.target.value)}
-                                    placeholder="Add a note about your decision..."
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 resize-none bg-white" />
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => doApproval("APPROVED")} disabled={busy}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors">
-                                    {busy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                                    Approve
-                                </button>
-                                <button onClick={() => doApproval("REJECTED")} disabled={busy}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors">
-                                    {busy ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
-                                    Reject
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {action.type === "dispatch" && (
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Tracking Information</label>
-                                <textarea rows={2} value={trackingInfo} onChange={(e) => setTrackingInfo(e.target.value)}
-                                    placeholder="Enter tracking number or delivery details..."
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 resize-none bg-white" />
-                            </div>
-                            <button onClick={doDispatch} disabled={busy}
-                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors">
-                                {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                                Mark as Dispatched
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex border-b border-gray-100">
-                    {[
-                        { key: "overview", label: "Overview", icon: FileText },
-                        { key: "students", label: `Students (${request.students?.length || 0})`, icon: Users },
-                        { key: "samples", label: `Samples (${request.samples?.length || 0})`, icon: Image },
-                        { key: "timeline", label: `Timeline (${request.approvals?.length || 0})`, icon: Clock },
-                    ].map(({ key, label, icon: Icon }) => (
-                        <button key={key} onClick={() => setTab(key)}
-                            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all
-                                ${tab === key ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-400 hover:text-gray-700"}`}>
-                            <Icon size={13} /> {label}
+        <div className="max-w-[1440px] mx-auto min-h-screen bg-slate-50/50 flex flex-col">
+            <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30">
+                <div className="max-w-[1440px] mx-auto px-6 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate("/idcard/requests")} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+                            <ArrowLeft size={18} />
                         </button>
-                    ))}
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg font-black text-slate-900 tracking-tighter italic uppercase">{request.request_no}</h1>
+                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border ${cfg.color}`}>{cfg.label}</span>
+                            </div>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{request.tenant_name}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                         <button onClick={load} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><RefreshCw size={14} className={loading ? 'animate-spin' : ''}/></button>
+                         <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Layers size={14} /></button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="p-4 sm:p-5 space-y-4 flex-1">
+                {/* Visual Stepper & Stats Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex items-center overflow-x-auto scrollbar-hide">
+                        {STEPS.map((s, i) => (
+                            <div key={i} className={`flex items-center shrink-0 ${i < STEPS.length - 1 ? 'flex-1 min-w-[100px]' : ''}`}>
+                                <div className="flex flex-col items-center">
+                                    <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black transition-all mb-1
+                                        ${i < step ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100"
+                                            : i === step ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-110 ring-4 ring-indigo-50"
+                                                : "bg-slate-100 text-slate-300"}`}>
+                                        {i < step ? <Check size={14} strokeWidth={3} /> : i + 1}
+                                    </div>
+                                    <p className={`text-[8px] font-black uppercase tracking-widest text-center leading-tight
+                                        ${i <= step ? "text-slate-900" : "text-slate-200"}`}>{s}</p>
+                                </div>
+                                {i < STEPS.length - 1 && (
+                                    <div className="flex-1 px-2 mb-4">
+                                        <div className={`h-0.5 rounded-full ${i < step ? "bg-emerald-400" : "bg-slate-50"}`} />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="lg:col-span-4 grid grid-cols-2 gap-2">
+                         <StatCard label="Admissions" value={request.total_students} icon={Users} color="bg-indigo-600" />
+                         <StatCard label="Photos" value={request.students?.filter(s=>s.photo_url).length} icon={Image} color="bg-blue-600" />
+                         <StatCard label="Design Cycle" value="v1.2" icon={RefreshCw} color="bg-amber-600" />
+                         <StatCard label="Dispatch Prob" value="95%" icon={Zap} color="bg-rose-600" />
+                    </div>
                 </div>
 
-                <div className="p-5">
-                    {tab === "overview" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Uploaded Assets</p>
-                                {uploadsRaw.length === 0 ? (
-                                    <p className="text-sm text-gray-400">No files uploaded.</p>
-                                ) : (
-                                    <div className="space-y-2">
+                {action && (
+                    <div className={`relative border border-slate-100 rounded-2xl p-6 shadow-md overflow-hidden bg-white animate-in zoom-in-95 duration-500`}>
+                        <div className={`absolute top-0 left-0 w-1.5 h-full ${action.type === "sample" ? "bg-purple-600" : "bg-amber-500"}`} />
+                        <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${action.type === "sample" ? "bg-purple-50 text-purple-600 shadow-purple-100" : "bg-amber-50 text-amber-600 shadow-amber-100"}`}>
+                                {action.type === "sample" ? <Image size={24} /> : <AlertCircle size={24} />}
+                            </div>
+                            <div className="flex-1 space-y-4">
+                                <div>
+                                    <h2 className="text-base font-black text-slate-900 uppercase italic tracking-tighter">
+                                        {action.type === "sample" ? "Crafting Prototype Assets" : "Executive Action Required"}
+                                    </h2>
+                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                                        STAGE: {action.stage} · OPERATION: {action.type === "sample" ? "Proof Rendering" : "Auth Protocol"}
+                                    </p>
+                                </div>
+                                {msg && (
+                                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-left-4
+                                        ${msg.ok ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                        {msg.ok ? <Check size={12} /> : <AlertCircle size={12} />} {msg.text}
+                                    </div>
+                                )}
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    {action.type === "sample" ? (
+                                        <div className="flex gap-4 w-full">
+                                            <SamplePicker label="Front Face" value={sampleF} onChange={setSampleF} />
+                                            <SamplePicker label="Back Face" value={sampleB} onChange={setSampleB} />
+                                            <button onClick={doSample} disabled={actionBusy || !sampleF || !sampleB} className="bg-purple-600 text-white px-6 rounded-xl font-black text-[10px] uppercase shadow-lg disabled:opacity-50">Upload Proofs</button>
+                                        </div>
+                                    ) : action.type === "review" ? (
+                                        <div className="flex gap-3 w-full">
+                                            <input value={comments} onChange={e=>setComments(e.target.value)} placeholder="Authorization comments..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none" />
+                                            <button onClick={()=>doApproval("APPROVED")} disabled={actionBusy} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase shadow-emerald-100 shadow-lg">{actionBusy ? <Loader2 className="animate-spin" size={14}/> : 'Approve'}</button>
+                                            <button onClick={()=>doApproval("REJECTED")} disabled={actionBusy} className="bg-rose-50 text-rose-600 border border-rose-100 px-6 py-3 rounded-xl font-black text-[10px] uppercase">Reject</button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-3 w-full">
+                                            <input value={trackingInfo} onChange={e=>setTrackingInfo(e.target.value)} placeholder="Tracking reference/AWB..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none" />
+                                            <button onClick={doDispatch} disabled={actionBusy || !trackingInfo} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-indigo-100">Finalize Dispatch</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[400px]">
+                    <div className="flex bg-slate-50 border-b border-slate-100 px-4">
+                        {[
+                            { key: "overview", label: "Assets", icon: FileText },
+                            { key: "students", label: `Manifest (${request.students?.length || 0})`, icon: Users },
+                            { key: "samples", label: `Proofs (${request.samples?.length || 0})`, icon: Image },
+                            { key: "timeline", label: `Audit Trail`, icon: Clock },
+                        ].map(({ key, label, icon: Icon }) => (
+                            <button key={key} onClick={() => setTab(key)}
+                                className={`flex items-center gap-2 px-6 py-4 text-[9px] font-black uppercase tracking-widest transition-all border-b-2
+                                    ${tab === key 
+                                        ? "border-indigo-600 text-indigo-600 bg-white" 
+                                        : "border-transparent text-slate-400 hover:text-slate-700"}`}>
+                                <Icon size={12} /> {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="p-6 flex-1">
+                        {tab === "overview" && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Manufacturing Materials</h3>
+                                    <div className="grid grid-cols-3 gap-3">
                                         {uploadsRaw.map((f, i) => {
                                             const isImg = /\.(jpg|jpeg|png|webp|gif)$/i.test(f.url);
                                             const src = f.url.startsWith("http") ? f.url : `${BASE}${f.url}`;
                                             return (
-                                                <div key={i} className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2">
-                                                    {isImg
-                                                        ? <img src={src} alt={f.label} className="w-10 h-10 object-contain rounded border border-gray-100 bg-white flex-shrink-0" />
-                                                        : <div className="w-10 h-10 bg-gray-50 rounded border border-gray-100 flex items-center justify-center flex-shrink-0"><FileText size={16} className="text-gray-400" /></div>
-                                                    }
-                                                    <p className="text-sm text-gray-700 flex-1 font-medium">{f.label}</p>
-                                                    <a href={src} target="_blank" rel="noreferrer"
-                                                        className="text-xs text-indigo-600 hover:underline flex-shrink-0">View</a>
+                                                <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white transition-all shadow-sm">
+                                                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-100">
+                                                        {isImg ? <img src={src} className="w-full h-full object-contain p-1" /> : <FileText size={16} className="text-slate-300" />}
+                                                    </div>
+                                                    <a href={src} target="_blank" rel="noreferrer" className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter truncate w-full text-center">{f.label}</a>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Remarks</p>
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[80px]">
-                                    <p className="text-sm text-gray-600">{request.remarks || "No remarks."}</p>
+                                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                                         <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-2 flex items-center gap-2"><Globe size={10}/> Order Intel</p>
+                                         <div className="space-y-1">
+                                             <div className="flex justify-between text-[11px] font-black text-slate-800 italic"><span>Volume Profile:</span> <span>{request.students?.length} Units</span></div>
+                                             <div className="flex justify-between text-[11px] font-black text-slate-800 italic"><span>Cycle Node:</span> <span>{request.status}</span></div>
+                                         </div>
+                                    </div>
                                 </div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">Request Info</p>
-                                <div className="space-y-1.5 text-sm">
-                                    <div className="flex justify-between"><span className="text-gray-500">Total Students</span><span className="font-medium text-gray-800">{request.students?.length || 0}</span></div>
-                                    <div className="flex justify-between"><span className="text-gray-500">Submitted</span><span className="font-medium text-gray-800">{new Date(request.created_at).toLocaleDateString("en-IN")}</span></div>
-                                    <div className="flex justify-between"><span className="text-gray-500">School</span><span className="font-medium text-gray-800">{request.tenant_name}</span></div>
+                                <div className="space-y-4">
+                                     <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Production Directives</h3>
+                                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[11px] font-medium text-slate-600 leading-relaxed italic h-full">
+                                         {request.remarks || "No special remarks indicated for this production cycle."}
+                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            {request.tracking_info && (
-                            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Tracking Details</p>
-                                <p className="text-sm font-medium text-gray-800">{request.tracking_info}</p>
+                        {tab === "students" && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                     <div className="relative w-full max-w-xs">
+                                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                         <input placeholder="Filter manifest..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-400 focus:bg-white" />
+                                     </div>
+                                     {role === "school" && <button onClick={()=>setIsAddStudentOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-indigo-100"><Plus size={12}/> Inject Record</button>}
+                                </div>
+                                <div className="border border-slate-100 rounded-xl overflow-hidden">
+                                     <table className="w-full text-left text-xs">
+                                         <thead className="bg-slate-50">
+                                             <tr>
+                                                 <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Profile</th>
+                                                 <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identity Data</th>
+                                                 <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Academic</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody className="divide-y divide-slate-50">
+                                             {request.students?.map(s => (
+                                                 <tr key={s.id} className="hover:bg-slate-50/50">
+                                                     <td className="px-4 py-2">
+                                                         <div className="w-8 h-8 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center">
+                                                             {s.photo_url ? <img src={s.photo_url.startsWith('http')?s.photo_url : `${BASE}${s.photo_url}`} className="w-full h-full object-cover" /> : <div className="text-[8px] font-black text-slate-300">{s.first_name?.[0]}</div>}
+                                                         </div>
+                                                     </td>
+                                                     <td className="px-4 py-2">
+                                                         <p className="font-black text-slate-900 italic leading-none">{s.first_name} {s.last_name}</p>
+                                                         <p className="text-[8px] font-black text-slate-400 uppercase mt-0.5">{s.admission_no}</p>
+                                                     </td>
+                                                     <td className="px-4 py-2 text-right">
+                                                         <span className="text-[9px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">{s.class}{s.section?`-${s.section}`:''}</span>
+                                                     </td>
+                                                 </tr>
+                                             ))}
+                                         </tbody>
+                                     </table>
+                                </div>
                             </div>
-                            )}
-                        </div>
-                    )}
+                        )}
 
-                    {tab === "students" && (
-                        request.students?.length === 0
-                            ? <p className="text-sm text-gray-400 text-center py-8">No students in this request.</p>
-                            : <table className="w-full text-sm">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                    <tr>{["Photo", "Adm No", "Name", "Class", "Blood Group", "Status"].map((h) => (
-                                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500">{h}</th>
-                                    ))}</tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {request.students.map((s) => {
-                                        const src = s.photo_url ? (s.photo_url.startsWith("http") ? s.photo_url : `${BASE}${s.photo_url}`) : null;
-                                        return (
-                                            <tr key={s.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3">
-                                                    {src ? <img src={src} alt={s.first_name} className="w-8 h-8 object-cover rounded-full border border-gray-200" />
-                                                        : <div className="w-8 h-8 rounded-full bg-indigo-50 border border-gray-200 flex items-center justify-center text-xs font-bold text-indigo-400">{s.first_name?.[0]}{s.last_name?.[0]}</div>}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-500 text-xs font-medium">{s.admission_no}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-900">{s.first_name} {s.last_name}</td>
-                                                <td className="px-4 py-3 text-gray-500">{s.class || "—"}{s.section ? `-${s.section}` : ""}</td>
-                                                <td className="px-4 py-3">{s.blood_group ? <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-medium">{s.blood_group}</span> : "—"}</td>
-                                                <td className="px-4 py-3"><span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-md font-medium">{s.status}</span></td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                    )}
-
-                    {tab === "samples" && (
-                        request.samples?.length === 0
-                            ? <p className="text-sm text-gray-400 text-center py-8">No samples uploaded yet.</p>
-                            : <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {request.samples.map((s) => {
-                                    const front = s.sample_front_url?.startsWith("http") ? s.sample_front_url : `${BASE}${s.sample_front_url}`;
-                                    const back = s.sample_back_url?.startsWith("http") ? s.sample_back_url : `${BASE}${s.sample_back_url}`;
-                                    return (
-                                        <div key={s.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                                            <div className="grid grid-cols-2 divide-x divide-gray-100">
-                                                <div className="p-3">
-                                                    <p className="text-xs text-gray-400 font-medium mb-2 text-center">Front</p>
-                                                    <img src={front} alt="front" className="w-full h-28 object-contain border border-gray-100 rounded-lg bg-gray-50" />
-                                                </div>
-                                                <div className="p-3">
-                                                    <p className="text-xs text-gray-400 font-medium mb-2 text-center">Back</p>
-                                                    <img src={back} alt="back" className="w-full h-28 object-contain border border-gray-100 rounded-lg bg-gray-50" />
-                                                </div>
-                                            </div>
-                                            <div className="px-4 py-2.5 border-t border-gray-100 flex justify-between items-center">
-                                                <p className="text-xs text-gray-400">By: {s.uploaded_by_name || "—"}</p>
-                                                <p className="text-xs text-gray-400">{new Date(s.uploaded_at).toLocaleDateString("en-IN")}</p>
-                                            </div>
+                        {tab === "samples" && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                                {request.samples?.map((s, i) => (
+                                    <div key={s.id} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden shadow-sm group">
+                                        <div className="p-3 border-b border-slate-100 bg-white flex justify-between items-center text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span>Iteration 0{i+1}</span>
+                                            <span>{new Date(s.uploaded_at).toLocaleDateString()}</span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                    )}
-
-                    {tab === "timeline" && (
-                        request.approvals?.length === 0
-                            ? <p className="text-sm text-gray-400 text-center py-8">No actions taken yet.</p>
-                            : <div className="space-y-3">
-                                {request.approvals.map((a) => (
-                                    <div key={a.id} className="flex gap-4 items-start">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-                                        ${a.action === "APPROVED" ? "bg-green-100" : "bg-red-100"}`}>
-                                            {a.action === "APPROVED"
-                                                ? <CheckCircle size={15} className="text-green-600" />
-                                                : <XCircle size={15} className="text-red-500" />}
-                                        </div>
-                                        <div className="flex-1 border border-gray-200 rounded-xl px-4 py-3">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-800">{a.action_by_name || "—"}</p>
-                                                    <p className="text-xs text-gray-400">{a.action_role} · {a.action_stage}</p>
-                                                </div>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0
-                                                ${a.action === "APPROVED" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-                                                    {a.action}
-                                                </span>
-                                            </div>
-                                            {a.comments && <p className="text-xs text-gray-500 mt-2 border-t border-gray-100 pt-2">{a.comments}</p>}
-                                            <p className="text-[10px] text-gray-400 mt-1">{new Date(a.created_at).toLocaleString("en-IN")}</p>
+                                        <div className="grid grid-cols-2 p-4 gap-4">
+                                            <div className="bg-white rounded-lg border border-slate-100 p-1 aspect-[3/4]"><img src={s.sample_front_url.startsWith('http')?s.sample_front_url : `${BASE}${s.sample_front_url}`} className="w-full h-full object-contain"/></div>
+                                            <div className="bg-white rounded-lg border border-slate-100 p-1 aspect-[3/4]"><img src={s.sample_back_url.startsWith('http')?s.sample_back_url : `${BASE}${s.sample_back_url}`} className="w-full h-full object-contain"/></div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                    )}
+                        )}
+
+                        {tab === "timeline" && (
+                            <div className="space-y-6 max-w-2xl mx-auto py-4">
+                                {request.approvals?.map(a => (
+                                    <div key={a.id} className="flex gap-4 items-start">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white ${a.action === 'APPROVED' ? 'bg-emerald-500 shadow-lg shadow-emerald-50' : 'bg-rose-500'}`}>
+                                            {a.action === 'APPROVED' ? <Check size={14}/> : <XCircle size={14}/>}
+                                        </div>
+                                        <div className="flex-1 bg-slate-50 border border-slate-100 rounded-xl p-4">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h4 className="text-[10px] font-black text-slate-900 uppercase italic">{a.action_by_name}</h4>
+                                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{new Date(a.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 font-medium italic underline decoration-indigo-100 mb-2">"{a.comments || 'Direct protocol approval.'}"</p>
+                                            <div className="text-[7px] font-black text-indigo-400 uppercase tracking-widest">{a.action_role} · {a.action_stage} PHASE</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
+            </main>
+
+            <AddStudentModal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} requestId={id} tenantId={user?.tenant_id} onAdded={load} />
+        </div>
+    );
+}
+
+function SamplePicker({ label, value, onChange }) {
+    const ref = useRef();
+    return (
+        <div className="flex-1 flex flex-col gap-1.5 cursor-pointer" onClick={()=>ref.current?.click()}>
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">{label}</p>
+            <div className={`aspect-[4/3] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all p-1 overflow-hidden
+                ${value ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-white'}`}>
+                {value ? <img src={URL.createObjectURL(value)} className="w-full h-full object-contain" /> : <Upload size={16} className="text-slate-300" />}
             </div>
+            <input ref={ref} type="file" className="hidden" onChange={e=>onChange(e.target.files[0])} />
         </div>
     );
 }

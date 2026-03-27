@@ -1,12 +1,24 @@
 import { useState, useEffect } from "react";
-import { 
-    Plus, Ticket, Send, ArrowLeft, 
-    Link, FileText, AlertTriangle 
+import {
+    Plus, Ticket, Send, ArrowLeft,
+    Link, FileText, AlertTriangle, Loader2,
+    Shield, User, Building2, AlignLeft,
+    CheckCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiCreateTicket, apiGetTenants, apiUploadFile } from "../../utils/api";
 import { useToast } from "../../components/common/Toast";
 import { useAuth } from "../../auth/AuthContext";
+
+const inputCls = "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-800 outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-sm";
+const labelCls = "block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-0.5";
+
+const Field = ({ label, children }) => (
+    <div className="space-y-1">
+        <label className={labelCls}>{label}</label>
+        {children}
+    </div>
+);
 
 export default function CreateTicket() {
     const [formData, setFormData] = useState({
@@ -20,10 +32,10 @@ export default function CreateTicket() {
     const [file, setFile] = useState(null);
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { showToast } = useToast();
+    const toast = useToast();
 
     useEffect(() => {
-        if (user?.role === 'admin' || user?.role === 'GMMC_ADMIN') {
+        if (['admin', 'GMMC_ADMIN'].includes(user?.role)) {
             fetchTenants();
         } else {
             setFormData(prev => ({ ...prev, tenant_id: user?.tenant_id }));
@@ -41,10 +53,9 @@ export default function CreateTicket() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
-            setLoading(true);
             let uploadedAttachments = [];
-            
             if (file) {
                 const uploadRes = await apiUploadFile(file, 'general');
                 if (uploadRes.success) {
@@ -54,147 +65,186 @@ export default function CreateTicket() {
 
             const payload = { ...formData, attachments: uploadedAttachments };
             const data = await apiCreateTicket(payload);
-            
+
             if (data.success) {
-                showToast("Ticket created successfully!", "success");
-                navigate("/ticketing");
+                toast.success("Ticket generated successfully!");
+                setTimeout(() => navigate("/ticketing"), 1000);
             }
         } catch (err) {
-            showToast(err.message || "Failed to create ticket", "error");
+            toast.error(err.message || "Failed to submit case");
         } finally {
             setLoading(false);
         }
     };
 
+    const poppins = { fontFamily: "'Poppins', sans-serif" };
+
     return (
-        <div className="max-w-3xl mx-auto pb-12">
-            <button 
-                onClick={() => navigate("/ticketing")}
-                className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors mb-6 group"
-            >
-                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                Return to Dashboard
-            </button>
+        <div style={poppins} className="p-5 max-w-4xl animate-in fade-in duration-500 pb-12 mx-auto">
 
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
-                <div className="bg-amber-600 p-8 text-white relative">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                            <Plus size={28} />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold">New Support Ticket</h1>
-                            <p className="text-amber-100/80 text-sm mt-1">Please provide detailed information about your issue.</p>
-                        </div>
-                    </div>
+            {/* ── Heading ── */}
+            <div className="flex items-center gap-4 mb-6">
+                <button
+                    onClick={() => navigate("/ticketing")}
+                    className="p-2 bg-white border border-gray-100 rounded-lg text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm group"
+                >
+                    <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                </button>
+                <div>
+                    <h1 className="text-base font-extrabold text-gray-900 tracking-tight leading-none uppercase italic">Open Support Case</h1>
+                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                        Direct access to engineering team <span className="text-gray-200">|</span> Priority handling
+                    </p>
                 </div>
+            </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Issue Title</label>
-                            <input 
+            {/* ── Form Card ── */}
+            <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+
+                    {/* Primary Issue Details */}
+                    <div className="md:col-span-2 p-6 space-y-5">
+                        <div className="flex items-center gap-2 mb-1">
+                            <AlignLeft size={13} className="text-indigo-500" />
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Clinical Description</h3>
+                        </div>
+
+                        <Field label="Case Title *">
+                            <input
                                 required
-                                type="text" 
-                                placeholder="E.g. Student ID generator error"
-                                className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-amber-500 transition-all focus:bg-white"
+                                type="text"
+                                className={inputCls}
+                                placeholder="Succinct summary of the technical issue..."
                                 value={formData.title}
-                                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             />
-                        </div>
+                        </Field>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Priority Level</label>
-                            <select 
-                                className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-amber-500 transition-all font-medium text-gray-600 focus:bg-white"
-                                value={formData.priority}
-                                onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                            >
-                                <option value="LOW">Low - General Question</option>
-                                <option value="MEDIUM">Medium - Normal Issue</option>
-                                <option value="HIGH">High - Major Feature Block</option>
-                                <option value="CRITICAL">Critical - System Down</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {(user?.role === 'admin' || user?.role === 'GMMC_ADMIN') && (
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Affected School / Tenant</label>
-                            <select 
+                        <Field label="Comprehensive Details *">
+                            <textarea
                                 required
-                                className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-amber-500 transition-all font-medium text-gray-600 focus:bg-white"
-                                value={formData.tenant_id}
-                                onChange={(e) => setFormData({...formData, tenant_id: e.target.value})}
-                            >
-                                <option value="">Select Tenant...</option>
-                                <option value="0">System-wide (Internal)</option>
-                                {tenants.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                                rows="8"
+                                className={`${inputCls} resize-none leading-relaxed italic`}
+                                placeholder="Describe the behavior, steps to reproduce, and expected outcome..."
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            />
+                        </Field>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Problem Description</label>
-                        <textarea 
-                            required
-                            rows="6"
-                            placeholder="Describe the issue in detail. What happened? How to reproduce? Any error messages?"
-                            className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-amber-500 transition-all resize-none focus:bg-white"
-                            value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        ></textarea>
-                    </div>
-
-                    <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-start gap-4">
-                        <AlertTriangle className="text-rose-500 flex-shrink-0" size={20} />
-                        <div>
-                            <p className="text-xs font-bold text-rose-800 uppercase tracking-wide">Developer Tip</p>
-                            <p className="text-[11px] text-rose-600/80 mt-1 leading-relaxed">
-                                Screenshots or video recordings help us resolve issues 70% faster. 
-                                Although this form doesn't support direct uploads yet, please provide links to Google Drive or other storage if possible.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4 relative">
-                            <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer text-sm font-bold border border-indigo-100">
-                                <FileText size={16} />
-                                {file ? 'Change Attachment' : 'Add Attachment'}
-                                <input 
-                                    type="file" 
+                        {/* File Attachment Area */}
+                        <div className="pt-2">
+                            <label className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 border border-dashed border-slate-200 rounded-xl hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group">
+                                <FileText size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] font-bold text-slate-700 truncate">
+                                        {file ? file.name : 'Upload Technical Attachment (Logs, Images)'}
+                                    </p>
+                                    <p className="text-[9px] text-slate-400 uppercase tracking-tight">Max 5MB per file</p>
+                                </div>
+                                {file && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); setFile(null); }}
+                                        className="text-rose-500 hover:text-rose-700 font-black text-xs px-2"
+                                    >
+                                        REMOVE
+                                    </button>
+                                )}
+                                <input
+                                    type="file"
                                     className="hidden"
                                     onChange={(e) => setFile(e.target.files[0])}
                                 />
                             </label>
-                            {file && (
-                                <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                                    <span className="text-xs font-bold text-gray-700 truncate max-w-[150px]">{file.name}</span>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setFile(null)}
-                                        className="text-red-500 hover:text-red-700 font-bold text-xs px-1"
-                                    >
-                                        &times;
-                                    </button>
-                                </div>
-                            )}
                         </div>
-                        <button 
-                            type="submit" 
-                            disabled={loading}
-                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
+                    </div>
+
+                    {/* Classification & Context */}
+                    <div className="p-6 space-y-6 bg-gray-50/20">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Shield size={13} className="text-indigo-500" />
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Context & SLA</h3>
+                        </div>
+
+                        <Field label="System Priority *">
+                            <select
+                                className={inputCls}
+                                value={formData.priority}
+                                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                            >
+                                <option value="LOW">Informational / Query</option>
+                                <option value="MEDIUM">Operational Friction</option>
+                                <option value="HIGH">Workflow Blocked</option>
+                                <option value="CRITICAL">Hard Failure / Downtime</option>
+                            </select>
+                        </Field>
+
+                        {(['admin', 'GMMC_ADMIN'].includes(user?.role)) && (
+                            <Field label="Target Environment *">
+                                <select
+                                    required
+                                    className={inputCls}
+                                    value={formData.tenant_id}
+                                    onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}
+                                >
+                                    <option value="">Select Target...</option>
+                                    <option value="0">Global (Base System)</option>
+                                    {tenants?.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </Field>
+                        )}
+
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <AlertTriangle size={12} className="text-amber-500" />
+                                    <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Escalation Notice</h4>
+                                </div>
+                                <p className="text-[10px] text-gray-500 leading-relaxed font-medium">
+                                    Critical reports trigger direct alerts to engineers. Please only use for system outages.
+                                </p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8 group-hover:scale-125 transition-transform" />
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-indigo-200 relative z-10">Verification</h4>
+                                <p className="text-[10px] mt-2 font-bold leading-relaxed relative z-10">
+                                    Tickets are reviewed within window of 2-4 hours. You'll receive real-time updates in your dashboard.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Footer ── */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-[10px] text-gray-400 font-medium italic">
+                        By submitting, you acknowledge this is a persistent technical record.
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/ticketing")}
+                            className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors"
                         >
-                            <Send size={18} />
-                            {loading ? "Submitting..." : "Send Ticket"}
+                            Discard
+                        </button>
+                        <button
+                            disabled={loading}
+                            type="submit"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg shadow-sm shadow-indigo-100 transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50"
+                        >
+                            {loading ? (
+                                <><Loader2 size={13} className="animate-spin" /> Transmitting...</>
+                            ) : (
+                                <><Plus size={13} /> Submit Case</>
+                            )}
                         </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     );
 }

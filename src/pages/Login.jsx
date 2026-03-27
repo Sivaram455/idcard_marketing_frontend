@@ -51,7 +51,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 antialiased">
       <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
+
         {/* Branding */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-100 mb-6">

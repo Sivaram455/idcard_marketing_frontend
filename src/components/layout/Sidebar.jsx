@@ -7,10 +7,11 @@ import {
   LogOut,
   ChevronRight,
   CreditCard,
-  Ticket
+  Ticket,
+  X
 } from "lucide-react";
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,38 +32,45 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 h-screen sticky top-0 flex flex-col p-4 shadow-sm z-20">
-      <div className="flex items-center gap-3 px-3 py-8 mb-6">
-        <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100 flex items-center justify-center">
-          <div className="w-5 h-5 bg-white rounded-full"></div>
+    <aside className="w-72 md:w-64 bg-white border-r border-slate-200 h-screen flex flex-col p-4 shadow-sm">
+      <div className="flex items-center justify-between px-3 py-6 lg:py-8 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-100 flex items-center justify-center">
+            <div className="w-5 h-5 bg-white rounded-full"></div>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tighter leading-none italic uppercase">ID <span className="text-indigo-600">MARKET</span></h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 leading-none">Intelligence Hub</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight leading-none">SchoolHub</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Student ID Portal</p>
-        </div>
+        <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-rose-500 transition-colors">
+          <X size={18} strokeWidth={3} />
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
           const active = isActive(item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
+              onClick={onClose}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 group ${
                 active
-                  ? "bg-blue-50 text-blue-700 shadow-sm"
+                  ? "bg-slate-900 text-white shadow-xl shadow-slate-100"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               <div className="flex items-center gap-3">
                 <item.icon 
-                  size={20} 
-                  className={`transition-colors ${active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`} 
+                  size={18} 
+                  strokeWidth={active ? 2.5 : 2}
+                  className={`transition-colors ${active ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-600"}`} 
                 />
-                <span className="font-semibold text-[15px]">{item.label}</span>
+                <span className="font-bold text-[13px] uppercase tracking-wider">{item.label}</span>
               </div>
-              {active && <ChevronRight size={14} className="text-blue-400 animate-in slide-in-from-left-1" />}
+              {active && <ChevronRight size={14} className="text-white/40 animate-in slide-in-from-left-1" strokeWidth={3} />}
             </Link>
           );
         })}

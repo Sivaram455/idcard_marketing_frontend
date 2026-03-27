@@ -320,3 +320,50 @@ export const apiGetDevelopers = async () => {
     const res = await fetch(`${BASE_URL}/ticketing/developers`, { headers: getHeaders() });
     return handleResponse(res);
 };
+
+// ─── Orders ──────────────────────────────────────────────────
+export const apiGetOrders = async () => {
+    const res = await fetch(`${BASE_URL}/orders`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetOrderStats = async () => {
+    const res = await fetch(`${BASE_URL}/orders/stats`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetOrdersBySchool = async (school_id) => {
+    const res = await fetch(`${BASE_URL}/orders/school/${school_id}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiGetOrderById = async (id) => {
+    const res = await fetch(`${BASE_URL}/orders/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
+export const apiCreateOrder = async (data) => {
+    const res = await fetch(`${BASE_URL}/orders`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiUpdateOrder = async (id, data) => {
+    const res = await fetch(`${BASE_URL}/orders/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiDeleteOrder = async (id) => {
+    const res = await fetch(`${BASE_URL}/orders/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+    });
+    return handleResponse(res);
+};

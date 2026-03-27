@@ -1,83 +1,131 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { LayoutDashboard, FileText, LogOut, CreditCard, Plus, User, ChevronLeft } from "lucide-react";
+import {
+    LayoutDashboard, FileText, LogOut, Layers,
+    Plus, ChevronLeft, Ticket
+} from "lucide-react";
 
-const NavItem = ({ to, icon: Icon, label, end }) => (
+const ROLE_LABELS = {
+    admin: "GMMC Admin", school: "School Admin", printer: "Printer",
+    GMMC_ADMIN: "GMMC Admin", SCHOOL_ADMIN: "School Admin", PRINTER: "Printer",
+};
+
+const NavItem = ({ to, icon: Icon, label, end, badge }) => (
     <NavLink
         to={to}
         end={end}
         className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            `flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                isActive
+                    ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
             }`
         }
     >
-        <Icon size={16} />
-        {label}
+        {({ isActive }) => (
+            <>
+                <span className="flex items-center gap-2.5">
+                    <Icon size={15} className={isActive ? "text-indigo-600" : "text-gray-400 group-hover:text-gray-600"} />
+                    {label}
+                </span>
+                {badge > 0 && (
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${isActive ? "bg-indigo-100 text-indigo-600" : "bg-amber-100 text-amber-600"}`}>
+                        {badge}
+                    </span>
+                )}
+            </>
+        )}
     </NavLink>
 );
-
-const ROLE_LABELS = { admin: "GMMC Admin", school: "School Admin", printer: "Printer", GMMC_ADMIN: "GMMC Admin", SCHOOL_ADMIN: "School Admin", PRINTER: "Printer" };
 
 export default function IDCardLayout() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const initials = user?.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "U";
+    const roleLabel = ROLE_LABELS[user?.role] || user?.role;
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Top bar */}
-            <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+
+            {/* ── Top Header ── */}
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-12 flex items-center px-5 justify-between gap-4">
+                {/* Left: Logo + breadcrumb */}
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-                        <CreditCard size={14} className="text-white" />
+                    <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={() => navigate("/idcard/dashboard")}
+                    >
+                        <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-300">
+                            <Layers size={13} className="text-white" />
+                        </div>
+                        <span className="font-extrabold text-gray-900 text-sm tracking-tight">GMMC</span>
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">ID-PRO</span>
-                    <span className="text-gray-300">/</span>
-                    <span className="text-sm text-gray-500">ID Cards</span>
+                    <span className="text-gray-200 text-sm select-none">/</span>
+                    <span className="text-sm text-gray-500 font-medium">ID Cards</span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600 hidden sm:block">{user?.full_name}</span>
+
+                {/* Right: User info + sign out */}
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-black select-none">
+                            {initials}
+                        </div>
+                        <div className="text-right leading-tight">
+                            <p className="text-xs font-semibold text-gray-800">{user?.full_name}</p>
+                            <p className="text-[10px] text-gray-400">{roleLabel}</p>
+                        </div>
+                    </div>
+                    <div className="w-px h-5 bg-gray-200" />
                     <button
                         onClick={() => { logout(); navigate("/"); }}
-                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-all font-medium"
                     >
-                        <LogOut size={15} /> Sign out
+                        <LogOut size={13} /> Sign out
                     </button>
                 </div>
             </header>
 
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                <aside className="w-52 bg-white border-r border-gray-200 p-3 space-y-1 flex-shrink-0">
-                    {user?.role === "admin" && (
-                        <button
-                            onClick={() => navigate("/admin-portal")}
-                            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-700 px-3 py-2 mb-1 transition-colors"
-                        >
-                            <ChevronLeft size={13} /> All portals
-                        </button>
-                    )}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 pt-1 pb-1">Menu</p>
-                    <NavItem to="/idcard/dashboard" icon={LayoutDashboard} label="Dashboard" end />
-                    <NavItem to="/idcard/requests" icon={FileText} label="Requests" />
-                    {(user?.role === "school" || user?.role === "SCHOOL_ADMIN") && (
-                        <NavItem to="/idcard/create-request" icon={Plus} label="New Request" />
-                    )}
-                    <div className="border-t border-gray-100 my-2 pt-2">
-                        <div className="flex items-center gap-2.5 px-3 py-2">
-                            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                                <User size={13} className="text-indigo-600" />
+            {/* ── Body ── */}
+            <div className="flex flex-1 overflow-hidden">
+
+                {/* ── Sidebar ── */}
+                <aside className="w-48 bg-white border-r border-gray-100 flex flex-col shrink-0 overflow-y-auto">
+                    <div className="flex-1 p-3 space-y-0.5">
+                        {/* Back to admin portal */}
+                        {["admin", "GMMC_ADMIN"].includes(user?.role) && (
+                            <button
+                                onClick={() => navigate("/admin-portal")}
+                                className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-indigo-600 px-3 py-2 mb-2 transition-colors font-bold uppercase tracking-widest w-full"
+                            >
+                                <ChevronLeft size={11} /> All Portals
+                            </button>
+                        )}
+
+                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest px-3 pb-1.5 pt-1">Navigation</p>
+
+                        <NavItem to="/idcard/dashboard" icon={LayoutDashboard} label="Dashboard" end />
+                        <NavItem to="/idcard/requests" icon={Ticket} label="Tickets" />
+
+                        {(user?.role === "school" || user?.role === "SCHOOL_ADMIN") && (
+                            <NavItem to="/idcard/create-request" icon={Plus} label="New Request" />
+                        )}
+                    </div>
+
+                    {/* User card at bottom */}
+                    <div className="p-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-gray-50">
+                            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-black shrink-0 select-none">
+                                {initials}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs font-semibold text-gray-800 truncate">{user?.full_name}</p>
-                                <p className="text-[10px] text-gray-400 truncate">{ROLE_LABELS[user?.role] || user?.role}</p>
+                                <p className="text-[11px] font-semibold text-gray-800 truncate leading-tight">{user?.full_name}</p>
+                                <p className="text-[9px] text-gray-400 truncate">{roleLabel}</p>
                             </div>
                         </div>
                     </div>
                 </aside>
 
-                {/* Main content */}
+                {/* ── Page Content ── */}
                 <main className="flex-1 overflow-auto">
                     <Outlet />
                 </main>
