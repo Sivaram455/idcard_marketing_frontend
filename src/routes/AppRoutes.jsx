@@ -39,8 +39,18 @@ import StudentsPage from "../pages/idcard/StudentsPage";
 // Ticketing module
 import TicketingLayout from "../pages/ticketing/TicketingLayout";
 import TicketingDashboard from "../pages/ticketing/TicketingDashboard";
+import SupportDashboard from "../pages/ticketing/SupportDashboard";
+import DeveloperDashboard from "../pages/ticketing/DeveloperDashboard";
 import CreateTicket from "../pages/ticketing/CreateTicket";
 import TicketDetails from "../pages/ticketing/TicketDetails";
+import { useAuth } from "../auth/AuthContext";
+
+const TicketingDispatcher = () => {
+  const { user } = useAuth();
+  if (user?.role === 'DEVELOPER') return <DeveloperDashboard />;
+  if (['SUPPORT', 'admin', 'GMMC_ADMIN'].includes(user?.role)) return <SupportDashboard />;
+  return <TicketingDashboard />;
+};
 
 export default function AppRoutes() {
   return (
@@ -103,8 +113,8 @@ export default function AppRoutes() {
       {/* Ticketing Portal — all roles can create, technical roles manage */}
       <Route element={<ProtectedRoute allowedRoles={["school", "SCHOOL_ADMIN", "admin", "GMMC_ADMIN", "SUPPORT", "DEVELOPER"]} />}>
         <Route element={<TicketingLayout />}>
-          <Route path="/ticketing" element={<TicketingDashboard />} />
-          <Route path="/ticketing/list" element={<TicketingDashboard />} />
+          <Route path="/ticketing" element={<TicketingDispatcher />} />
+          <Route path="/ticketing/list" element={<TicketingDispatcher />} />
           <Route path="/ticketing/new" element={<CreateTicket />} />
           <Route path="/ticketing/:id" element={<TicketDetails />} />
         </Route>

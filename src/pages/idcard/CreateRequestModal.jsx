@@ -3,7 +3,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { apiCreateRequest, apiBulkCreateStudents, apiAddStudent, apiUploadFile, apiGetTenants } from "../../utils/api";
 import * as XLSX from "xlsx";
 import {
-    ChevronLeft, ChevronRight, Check, Upload, Download,
+    ChevronLeft, ChevronRight, ChevronDown, Check, Upload, Download,
     UserPlus, Trash2, FileSpreadsheet, Loader2, AlertCircle,
     Image, X, CheckCircle, FileArchive, Layers, Info, Send
 } from "lucide-react";
@@ -295,8 +295,8 @@ export default function CreateRequestModal({ isOpen, onClose, onCreated }) {
                                     />
                                 </div>
                                 {(() => {
-                                    const adminRoles = ['admin', 'GMMC_ADMIN', 'GMMC-Admin', 'gmmc_admin', 'operations', 'marketer'];
-                                    return adminRoles.includes(user?.role?.toLowerCase()) || adminRoles.includes(user?.role);
+                                    const admins = ['admin', 'GMMC_ADMIN', 'GMMC-Admin', 'gmmc_admin', 'operations', 'marketer'];
+                                    return admins.includes(user?.role?.toLowerCase()) || admins.includes(user?.role);
                                 })() && (
                                     <div className="lg:col-span-12">
                                         <div className="flex items-center gap-2 mb-2">
@@ -312,7 +312,7 @@ export default function CreateRequestModal({ isOpen, onClose, onCreated }) {
                                             >
                                                 <option value="">{loadingTenants ? "Synchronizing Data..." : "Select Target School..."}</option>
                                                 {tenants.map(t => (
-                                                    <option key={t.id} value={t.id} className="text-slate-900 bg-white font-bold">{t.name}</option>
+                                                    <option key={t.id} value={t.id} className="text-slate-900 bg-white font-bold">{t.tenant_name}</option>
                                                 ))}
                                             </select>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/select:text-indigo-600 transition-colors">

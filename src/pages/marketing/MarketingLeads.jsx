@@ -32,11 +32,16 @@ export default function MarketingLeads() {
         try {
             const [schoolsRes, usersRes] = await Promise.all([
                 apiGetMarketingSchools(),
-                apiGetUsers(),
+                apiGetUsers().catch(err => {
+                    console.error("Users fetch restricted:", err);
+                    return { data: [] }; // Fallback for agents who can't see full directory
+                }),
             ]);
             setSchools(schoolsRes.data || []);
-            const agentRoles = ['AGENT', 'GMMC_ADMIN'];
-            setAgents((usersRes.data || []).filter(u => agentRoles.includes(u.role)));
+            const agentRoles = ['AGENT', 'GMMC_ADMIN', 'ADMIN', 'MARKETER'];
+            setAgents((usersRes.data || []).filter(u => 
+                u.role && agentRoles.includes(u.role.toUpperCase())
+            ));
         } catch (err) {
             console.error(err);
         } finally {
@@ -137,12 +142,12 @@ export default function MarketingLeads() {
 
                     {agents.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-4">No agents found</p>
-                    ) : agents.map(agent => {
+                    ) : agents.map((agent, index) => {
                         const count = agentLeadCounts[agent.id] || 0;
                         const active = agentFilter === agent.id;
                         const initials = agent.full_name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '??';
                         return (
-                            <button key={agent.id}
+                            <button key={`${agent.id}-${index}`}
                                 onClick={() => setAgentFilter(agent.id)}
                                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all ${
                                     active ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-50"
@@ -291,10 +296,10 @@ export default function MarketingLeads() {
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-50">
-                            {filtered.map(school => {
+                            {filtered.map((school, index) => {
                                 const cfg = STATUS[school.status] || STATUS.new;
                                 return (
-                                    <div key={school.id}
+                                    <div key={`${school.id}-${index}`}
                                         onClick={() => navigate(`/marketing/schools/${school.id}`)}
                                         className="grid items-center px-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors group"
                                         style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1fr 70px" }}>

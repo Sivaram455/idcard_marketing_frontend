@@ -22,10 +22,11 @@ const INTEREST_OPTIONS = [
     "Mobile App Required", "ID Card"
 ];
 
-const Field = ({ label, children, className = "" }) => (
+const Field = ({ label, children, className = "", error }) => (
     <div className={`space-y-0.5 ${className}`}>
         <label className={labelCls}>{label}</label>
         {children}
+        {error && <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mt-0.5 ml-1 animate-pulse">{error}</p>}
     </div>
 );
 
@@ -36,6 +37,7 @@ export default function AddLead() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(isEdit);
+    const [errors, setErrors] = useState({});
     const [formData, setFormData] = useState({
         school_name: "",
         contact_person1: "",
@@ -78,7 +80,7 @@ export default function AddLead() {
                     state: res.data.state || "",
                     comments: res.data.comments || "",
                     interested_in: res.data.interested_in || "",
-                    studentscount: res.data.studentscount || "",
+                    studentscount: res.data.studnetscount || res.data.studentscount || "",
                     demorequire: res.data.demorequire || "",
                     Board: res.data.Board || ""
                 });
@@ -92,7 +94,32 @@ export default function AddLead() {
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors({ ...errors, [name]: "" });
+        }
+    };
+
+    const validate = () => {
+        const newErrors = {};
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (formData.email && !emailRegex.test(formData.email)) {
+            newErrors.email = "Invalid email format";
+        }
+        
+        // Mobile validation: check if it's 10 digits
+        if (formData.mobile) {
+            const cleanMobile = formData.mobile.replace(/\D/g, '');
+            if (cleanMobile.length !== 10) {
+                newErrors.mobile = "Mobile must be 10 digits";
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const toggleInterest = (opt) => {
@@ -107,6 +134,10 @@ export default function AddLead() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!validate()) {
+            toast.error("Please correct errors in form");
+            return;
+        }
         setLoading(true);
         try {
             if (isEdit) {
@@ -227,14 +258,14 @@ export default function AddLead() {
                                         <Field label="Primary Decision Maker">
                                             <input required name="contact_person1" value={formData.contact_person1} onChange={handleChange} className={inputCls} placeholder="Full Name" />
                                         </Field>
-                                        <Field label="Direct Connectivity (Mobile)">
-                                            <input name="mobile" value={formData.mobile} onChange={handleChange} className={inputCls} placeholder="Phone" />
+                                        <Field label="Direct Connectivity (Mobile)" error={errors.mobile}>
+                                            <input name="mobile" value={formData.mobile} onChange={handleChange} className={`${inputCls} ${errors.mobile ? 'border-rose-400 focus:border-rose-500' : ''}`} placeholder="10 Digits" />
                                         </Field>
                                         <Field label="Secondary Liaison">
                                             <input name="contact_person2" value={formData.contact_person2} onChange={handleChange} className={inputCls} placeholder="Alt Name" />
                                         </Field>
-                                        <Field label="Official Email Protocol">
-                                            <input name="email" type="email" value={formData.email} onChange={handleChange} className={inputCls} placeholder="school@domain.com" />
+                                        <Field label="Official Email Protocol" error={errors.email}>
+                                            <input name="email" type="email" value={formData.email} onChange={handleChange} className={`${inputCls} ${errors.email ? 'border-rose-400 focus:border-rose-500' : ''}`} placeholder="school@domain.com" />
                                         </Field>
                                     </div>
                                 </div>

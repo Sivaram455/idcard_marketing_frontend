@@ -8,8 +8,9 @@ import {
 import * as XLSX from "xlsx";
 import {
     Upload, UserPlus, Trash2, Download, FileSpreadsheet,
-    Loader2, Check, X, AlertCircle, ChevronLeft, Users, Image
+    Loader2, Check, X, AlertCircle, ChevronLeft, Users, Image, Maximize2, ExternalLink
 } from "lucide-react";
+import ImageModal from "./ImageModal";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 const EMPTY_STUDENT = {
@@ -41,26 +42,33 @@ function PhotoPicker({ value, onChange }) {
 
     return (
         <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-                Photo <span className="text-gray-400">(optional · max 5MB)</span>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                Passport Photo <span className="opacity-50">(max 5MB)</span>
             </label>
             {value ? (
-                <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50">
-                    <img src={`${BASE}${value}`} alt="photo"
-                        className="w-10 h-10 object-cover rounded border border-gray-200 bg-white flex-shrink-0" />
-                    <p className="text-xs text-gray-500 flex-1 truncate">{value.split("/").pop()}</p>
+                <div className="flex items-center gap-4 border-2 border-slate-100 rounded-2xl p-2 bg-white shadow-sm group">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-50 flex-shrink-0">
+                        <img src={`${BASE}${value}`} alt="photo" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate">{value.split("/").pop()}</p>
+                    </div>
                     <button type="button" onClick={() => onChange("")}
-                        className="text-gray-400 hover:text-red-500"><X size={13} /></button>
+                        className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                        <X size={18} />
+                    </button>
                 </div>
             ) : (
                 <button type="button" onClick={() => ref.current?.click()} disabled={uploading}
-                    className="w-full flex items-center justify-center gap-1.5 border border-dashed border-gray-300 hover:border-indigo-400 text-gray-400 hover:text-indigo-600 text-xs py-3 rounded-lg transition-all disabled:opacity-60">
-                    {uploading
-                        ? <><Loader2 size={13} className="animate-spin" /> Uploading...</>
-                        : <><Image size={13} /> Select photo</>}
+                    className="w-full flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-100 hover:border-indigo-200 bg-slate-50/50 hover:bg-white text-slate-300 hover:text-indigo-600 py-8 rounded-[2rem] transition-all disabled:opacity-60 group">
+                    <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-50 group-hover:scale-110 transition-transform">
+                        {uploading ? <Loader2 size={20} className="animate-spin text-indigo-600" /> : <Image size={20} />}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{uploading ? 'Transmitting...' : 'Authorize Photo Upload'}</span>
                 </button>
             )}
-            {err && <p className="text-[10px] text-red-500 mt-1">{err}</p>}
+            {err && <p className="text-[10px] font-black text-rose-500 mt-2 px-2 uppercase tracking-wide">{err}</p>}
             <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handle} />
         </div>
     );
@@ -84,6 +92,11 @@ export default function StudentsPage() {
     const [preview, setPreview] = useState(null);
     const [deleting, setDeleting] = useState(null);
 
+    // Image Modal State
+    const [previewImg, setPreviewImg] = useState({ open: false, url: "", title: "" });
+    const openPreview = (url, title) => setPreviewImg({ open: true, url, title });
+    const closePreview = () => setPreviewImg({ ...previewImg, open: false });
+
     const load = () => {
         setLoading(true);
         apiGetStudentsByRequest(requestId)
@@ -101,7 +114,7 @@ export default function StudentsPage() {
         setSaving(true); setError("");
         try {
             await apiAddStudent({ ...form, request_id: requestId, tenant_id: user?.tenant_id });
-            setSuccess("Student added successfully.");
+            setSuccess("Entry Logged.");
             setForm(EMPTY_STUDENT);
             setShowAdd(false);
             load();
@@ -111,7 +124,7 @@ export default function StudentsPage() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("Delete this student?")) return;
+        if (!confirm("Confirm entry deletion?")) return;
         setDeleting(id);
         try { await apiDeleteStudent(id); load(); }
         catch (err) { alert(err.message); }
@@ -127,7 +140,7 @@ export default function StudentsPage() {
         ws["!cols"] = Array(9).fill({ wch: 22 });
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Students");
-        XLSX.writeFile(wb, "Student_Upload_Template.xlsx");
+        XLSX.writeFile(wb, "Operational_Template.xlsx");
     };
 
     const handleFileChange = (e) => {
@@ -160,7 +173,7 @@ export default function StudentsPage() {
         setUploading(true); setError("");
         try {
             await apiBulkCreateStudents(preview, user?.tenant_id, requestId);
-            setSuccess(`${preview.length} students uploaded successfully.`);
+            setSuccess(`Manifest Synchronized: ${preview.length} Entries.`);
             setPreview(null);
             load();
             setTimeout(() => setSuccess(""), 3000);
@@ -170,76 +183,75 @@ export default function StudentsPage() {
 
     // ─────────────────────────────────────────────────────────────
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 space-y-10 min-h-screen bg-white">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700 transition-colors">
-                    <ChevronLeft size={20} />
-                </button>
-                <div className="flex-1">
-                    <h1 className="text-xl font-bold text-gray-900">Students</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                        Request #{requestId} · {students.length} student{students.length !== 1 ? "s" : ""}
-                    </p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-8">
+                <div className="flex items-center gap-6">
+                    <button onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-400 transition-all border border-slate-100">
+                        <ChevronLeft size={20} strokeWidth={3} />
+                    </button>
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Student <span className="text-blue-600">Manifest</span></h1>
+                        <p className="text-sm text-slate-500 mt-2 font-bold uppercase tracking-widest opacity-60">
+                            Request ID: {requestId} // Buffer: {students.length} Entries
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                     <button onClick={downloadTemplate}
-                        className="flex items-center gap-1.5 border border-gray-300 text-gray-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                        <Download size={14} /> Template
+                        className="bg-white hover:bg-slate-50 text-slate-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200 flex items-center gap-2">
+                        <Download size={14} strokeWidth={3} /> Get Blueprint
                     </button>
                     <button onClick={() => fileRef.current?.click()}
-                        className="flex items-center gap-1.5 border border-gray-300 text-gray-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                        <FileSpreadsheet size={14} /> Upload Excel
+                        className="bg-white hover:bg-slate-50 text-slate-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200 flex items-center gap-2">
+                        <FileSpreadsheet size={14} strokeWidth={3} /> Sync Excel
                     </button>
                     <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileChange} />
                     <button onClick={() => { setShowAdd(true); setError(""); setForm(EMPTY_STUDENT); }}
-                        className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
-                        <UserPlus size={14} /> Add Student
+                        className="bg-slate-900 hover:bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-100 flex items-center gap-2">
+                        <UserPlus size={14} strokeWidth={3} /> Log Entry
                     </button>
                 </div>
             </div>
 
             {/* Alerts */}
-            {error && <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg"><AlertCircle size={14} />{error}</div>}
-            {success && <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg"><Check size={14} />{success}</div>}
+            {error && <div className="flex items-center gap-3 bg-rose-600 text-white rounded-xl px-6 py-4 text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-100 italic"><AlertCircle size={18} strokeWidth={3}/>{error}</div>}
+            {success && <div className="flex items-center gap-3 bg-emerald-600 text-white rounded-xl px-6 py-4 text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-100 italic"><Check size={18} strokeWidth={3}/>{success}</div>}
 
             {/* Excel Preview */}
             {preview && (
-                <div className="mb-5 bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-amber-50">
-                        <p className="text-sm font-semibold text-amber-800">{preview.length} students ready to upload</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setPreview(null)} className="text-xs border border-gray-300 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">Discard</button>
+                <div className="bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-200">
+                    <div className="flex items-center justify-between px-10 py-6 border-b border-white/5 bg-white/5 backdrop-blur-md">
+                        <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">{preview.length} Entries Ready for Ingestion</p>
+                        <div className="flex gap-4">
+                            <button onClick={() => setPreview(null)} className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors">Discard Buffer</button>
                             <button onClick={handleBulkUpload} disabled={uploading}
-                                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-1.5 rounded-lg disabled:opacity-60 transition-colors">
-                                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Confirm Upload
+                                className="bg-white text-slate-900 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-50 flex items-center gap-3">
+                                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} strokeWidth={3} />} Authorize Ingestion
                             </button>
                         </div>
                     </div>
-                    <div className="overflow-x-auto max-h-48 overflow-y-auto">
-                        <table className="w-full text-xs">
-                            <thead className="bg-gray-50 sticky top-0">
-                                <tr>{["Photo", "Adm No", "First Name", "Last Name", "Class", "Sec", "Roll", "DOB", "Blood"].map((h) => (
-                                    <th key={h} className="text-left px-4 py-2 font-semibold text-gray-500">{h}</th>
+                    <div className="overflow-x-auto max-h-64 overflow-y-auto scrollbar-hide">
+                        <table className="w-full text-left">
+                            <thead className="bg-white/5 sticky top-0 backdrop-blur-xl">
+                                <tr>{["Identity", "ID", "Name", "Class", "Sec", "Roll"].map((h) => (
+                                    <th key={h} className="px-10 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest italic">{h}</th>
                                 ))}</tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-white/5">
                                 {preview.map((s, i) => (
-                                    <tr key={i} className="hover:bg-gray-50">
-                                        <td className="px-4 py-2">
+                                    <tr key={i} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-10 py-4">
                                             {s.photo_url
-                                                ? <img src={s.photo_url} alt="" className="w-8 h-8 object-cover rounded border border-gray-200" onError={(e) => { e.target.style.display = "none"; }} />
-                                                : <div className="w-8 h-8 rounded border border-gray-200 bg-gray-50 flex items-center justify-center"><Image size={12} className="text-gray-300" /></div>
+                                                ? <img src={s.photo_url} alt="" className="w-10 h-10 object-cover rounded-xl border border-white/10" onError={(e) => { e.target.style.display = "none"; }} />
+                                                : <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center"><Image size={16} className="text-white/10" /></div>
                                             }
                                         </td>
-                                        <td className="px-4 py-2 text-gray-700 font-medium">{s.admission_no}</td>
-                                        <td className="px-4 py-2 text-gray-700">{s.first_name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.last_name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.class}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.section}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.roll_no}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.dob}</td>
-                                        <td className="px-4 py-2 text-gray-500">{s.blood_group}</td>
+                                        <td className="px-10 py-4 text-[10px] font-black text-white italic">{s.admission_no}</td>
+                                        <td className="px-10 py-4 text-[10px] font-black text-white uppercase italic">{s.first_name} {s.last_name}</td>
+                                        <td className="px-10 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">{s.class}</td>
+                                        <td className="px-10 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">{s.section}</td>
+                                        <td className="px-10 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">{s.roll_no}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -250,47 +262,41 @@ export default function StudentsPage() {
 
             {/* Add Student Form */}
             {showAdd && (
-                <div className="mb-5 bg-white border border-gray-200 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm font-semibold text-gray-800">Add Student Manually</p>
-                        <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-700"><X size={16} /></button>
+                <div className="bg-slate-50/50 border border-slate-100 rounded-[2.5rem] p-10 shadow-inner">
+                    <div className="flex items-center justify-between mb-10">
+                        <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Manual Entry Node</h2>
+                        <button onClick={() => setShowAdd(false)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 transition-colors bg-white rounded-xl border border-slate-100"><X size={18} strokeWidth={3}/></button>
                     </div>
-                    <form onSubmit={handleAddSingle}>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    <form onSubmit={handleAddSingle} className="space-y-10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             <F label="Admission No *" value={form.admission_no} ch={(v) => set("admission_no", v)} ph="ADM001" />
-                            <F label="First Name *" value={form.first_name} ch={(v) => set("first_name", v)} ph="Ravi" />
-                            <F label="Last Name" value={form.last_name} ch={(v) => set("last_name", v)} ph="Kumar" />
+                            <F label="First Name *" value={form.first_name} ch={(v) => set("first_name", v)} ph="RAVI" />
+                            <F label="Last Name" value={form.last_name} ch={(v) => set("last_name", v)} ph="KUMAR" />
                             <F label="Roll No" value={form.roll_no} ch={(v) => set("roll_no", v)} ph="01" />
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                             <F label="Class" value={form.class} ch={(v) => set("class", v)} ph="10" />
                             <F label="Section" value={form.section} ch={(v) => set("section", v)} ph="A" />
                             <F label="DOB" value={form.dob} ch={(v) => set("dob", v)} ph="YYYY-MM-DD" type="date" />
                             <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Blood Group</label>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 italic">Blood Group</label>
                                 <select value={form.blood_group} onChange={(e) => set("blood_group", e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400">
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-6 py-4 text-xs font-black uppercase italic text-slate-900 outline-none focus:border-blue-600 transition-all shadow-sm">
                                     <option value="">—</option>
                                     {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
                         </div>
 
-                        {/* Photo upload — full width */}
-                        <div className="mb-3">
-                            <PhotoPicker
-                                value={form.photo_url}
-                                onChange={(url) => set("photo_url", url)}
-                            />
-                        </div>
+                        <PhotoPicker
+                            value={form.photo_url}
+                            onChange={(url) => set("photo_url", url)}
+                        />
 
-                        {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
-                        <div className="flex justify-end gap-2 mt-2">
+                        <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
                             <button type="button" onClick={() => setShowAdd(false)}
-                                className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">Cancel</button>
+                                className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Abort</button>
                             <button type="submit" disabled={saving}
-                                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-60 transition-colors">
-                                {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Add Student
+                                className="bg-slate-900 hover:bg-black text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />} Log Student Node
                             </button>
                         </div>
                     </form>
@@ -298,70 +304,90 @@ export default function StudentsPage() {
             )}
 
             {/* Students Table */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
                 {loading ? (
-                    <div className="p-10 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+                    <div className="py-40 flex flex-col items-center justify-center gap-4 text-slate-300">
+                        <Loader2 size={40} className="animate-spin text-blue-600" />
+                        <p className="text-[10px] font-black uppercase tracking-widest italic">Syncing Manifest...</p>
+                    </div>
                 ) : students.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <Users size={32} className="mx-auto mb-3 text-gray-200" />
-                        <p className="text-gray-400 text-sm">No students added yet.</p>
-                        <p className="text-gray-400 text-xs mt-1">Use "Add Student" or "Upload Excel" to get started.</p>
+                    <div className="py-40 text-center flex flex-col items-center">
+                        <Users size={80} strokeWidth={1} className="mb-6 text-slate-100" />
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Manifest Zero // Buffer Null</p>
                     </div>
                 ) : (
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr>
-                                {["Photo", "Adm No", "Name", "Class", "Section", "Roll", "DOB", "Blood", ""].map((h) => (
-                                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500">{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {students.map((s) => (
-                                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-3">
-                                        {s.photo_url
-                                            ? <img src={s.photo_url.startsWith("http") ? s.photo_url : `${BASE}${s.photo_url}`}
-                                                alt={s.first_name}
-                                                className="w-9 h-9 object-cover rounded-full border border-gray-200" />
-                                            : <div className="w-9 h-9 rounded-full bg-indigo-50 border border-gray-200 flex items-center justify-center text-xs font-bold text-indigo-400">
-                                                {s.first_name?.[0]}{s.last_name?.[0]}
-                                            </div>
-                                        }
-                                    </td>
-                                    <td className="px-4 py-3 font-medium text-gray-700 text-xs">{s.admission_no}</td>
-                                    <td className="px-4 py-3 font-medium text-gray-900">{s.first_name} {s.last_name}</td>
-                                    <td className="px-4 py-3 text-gray-500">{s.class || "—"}</td>
-                                    <td className="px-4 py-3 text-gray-500">{s.section || "—"}</td>
-                                    <td className="px-4 py-3 text-gray-500">{s.roll_no || "—"}</td>
-                                    <td className="px-4 py-3 text-gray-500 text-xs">{s.dob ? new Date(s.dob).toLocaleDateString("en-IN") : "—"}</td>
-                                    <td className="px-4 py-3">
-                                        {s.blood_group
-                                            ? <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-medium">{s.blood_group}</span>
-                                            : <span className="text-gray-400">—</span>}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <button onClick={() => handleDelete(s.id)} disabled={deleting === s.id}
-                                            className="text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50">
-                                            {deleting === s.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                        </button>
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50/50 border-b border-slate-100">
+                                <tr>
+                                    {["Identity", "ID Node", "Full Name", "Level", "Section", "Roll", "Ingestion", "Type", ""].map((h) => (
+                                        <th key={h} className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{h}</th>
+                                    ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {students.map((s) => {
+                                    const photo = s.photo_url?.startsWith("http") ? s.photo_url : `${BASE}${s.photo_url}`;
+                                    return (
+                                        <tr key={s.id} className="hover:bg-slate-50 transition-all group">
+                                            <td className="px-8 py-5">
+                                                {s.photo_url ? (
+                                                    <div 
+                                                        onClick={() => openPreview(photo, `${s.first_name} ${s.last_name}`)}
+                                                        className="w-12 h-12 rounded-xl overflow-hidden border-2 border-slate-100 bg-white shadow-sm cursor-zoom-in group-hover:scale-110 group-hover:border-blue-200 transition-all"
+                                                    >
+                                                        <img src={photo} alt={s.first_name} className="w-full h-full object-cover" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-300 uppercase italic">
+                                                        {s.first_name?.[0]}{s.last_name?.[0]}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-8 py-5 font-black text-slate-900 text-[11px] italic tracking-tight uppercase">{s.admission_no}</td>
+                                            <td className="px-8 py-5 font-black text-slate-900 uppercase italic text-xs">{s.first_name} {s.last_name}</td>
+                                            <td className="px-8 py-5 text-slate-400 font-bold uppercase tracking-widest text-[10px]">L-{s.class || "—"}</td>
+                                            <td className="px-8 py-5 text-slate-400 font-bold uppercase tracking-widest text-[10px]">S-{s.section || "—"}</td>
+                                            <td className="px-8 py-5 text-slate-400 font-bold uppercase tracking-widest text-[10px]">#{s.roll_no || "—"}</td>
+                                            <td className="px-8 py-5 text-slate-400 font-bold uppercase tracking-widest text-[10px]">{s.dob ? new Date(s.dob).toLocaleDateString("en-GB") : "—"}</td>
+                                            <td className="px-8 py-5">
+                                                {s.blood_group ? (
+                                                    <span className="text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg italic uppercase shadow-sm border border-rose-100">{s.blood_group}</span>
+                                                ) : (
+                                                    <span className="text-slate-200">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <button onClick={() => handleDelete(s.id)} disabled={deleting === s.id}
+                                                    className="w-10 h-10 flex items-center justify-center text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50">
+                                                    {deleting === s.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} strokeWidth={2.5}/>}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
+            
+            <ImageModal 
+                isOpen={previewImg.open} 
+                onClose={closePreview} 
+                imageUrl={previewImg.url} 
+                title={previewImg.title} 
+            />
         </div>
     );
 }
 
 function F({ label, value, ch, ph, type = "text" }) {
     return (
-        <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+        <div className="space-y-3">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 italic">{label}</label>
             <input type={type} placeholder={ph} value={value || ""} onChange={(e) => ch(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50" />
+                className="w-full bg-white border border-slate-200 rounded-xl px-6 py-4 text-xs font-black uppercase italic text-slate-900 outline-none focus:border-blue-600 transition-all shadow-sm placeholder:text-slate-200" />
         </div>
     );
 }

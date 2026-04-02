@@ -1,12 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { apiCreateRequest, apiBulkCreateStudents, apiAddStudent, apiUploadFile } from "../../utils/api";
+import { apiCreateRequest, apiBulkCreateStudents, apiAddStudent, apiUploadFile, apiGetTenants } from "../../utils/api";
 import * as XLSX from "xlsx";
 import {
     ChevronLeft, ChevronRight, Check, Upload, Download,
     UserPlus, Trash2, FileSpreadsheet, Loader2, AlertCircle,
-    Image, X, CheckCircle, FileArchive
+    Image, X, CheckCircle, FileArchive, Search, ChevronDown
 } from "lucide-react";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
@@ -203,6 +203,25 @@ export default function CreateRequest() {
     const [requestId, setRequestId] = useState(null);
     const [requestNo, setRequestNo] = useState(null);
 
+    // Tenant Selection for Admins
+    const [tenants, setTenants] = useState([]);
+    const [loadingTenants, setLoadingTenants] = useState(false);
+    const [selectedTenantId, setSelectedTenantId] = useState(user?.tenant_id || "");
+    const [tenantSearch, setTenantSearch] = useState("");
+
+    const adminRoles = ['admin', 'GMMC_ADMIN', 'GMMC-Admin', 'gmmc_admin', 'operations', 'marketer'];
+    const isAdmin = adminRoles.includes(user?.role?.toLowerCase()) || adminRoles.includes(user?.role);
+
+    useEffect(() => {
+        if (isAdmin) {
+            setLoadingTenants(true);
+            apiGetTenants()
+                .then(res => setTenants(res.data || []))
+                .catch(() => {})
+                .finally(() => setLoadingTenants(false));
+        }
+    }, [isAdmin]);
+
     // Manual rows
     const [rows, setRows] = useState([BLANK_ROW()]);
     const [savingRows, setSavingRows] = useState(false);
@@ -216,9 +235,10 @@ export default function CreateRequest() {
     // ── Step 1 ────────────────────────────────────────────────────
     const createRequestIfNeeded = async () => {
         if (requestId) return requestId;
+        if (!selectedTenantId) throw new Error("Please select a target school.");
         try {
             const res = await apiCreateRequest({
-                tenant_id: user?.tenant_id,
+                tenant_id: selectedTenantId,
                 remarks: info.remarks || null,
                 school_logo_url: info.school_logo_url || null,
                 principal_signature_url: info.principal_signature_url || null,
@@ -272,7 +292,7 @@ export default function CreateRequest() {
             const activeReqId = await createRequestIfNeeded();
 
             for (const r of valid) {
-                await apiAddStudent({ ...r, request_id: activeReqId, tenant_id: user?.tenant_id });
+                await apiAddStudent({ ...r, request_id: activeReqId, tenant_id: selectedTenantId });
             }
             setRowSuccess(`${valid.length} student${valid.length > 1 ? "s" : ""} saved!`);
             setRows([BLANK_ROW()]);
@@ -339,7 +359,7 @@ export default function CreateRequest() {
             // Lazy-create request if we skipped Step 1
             const activeReqId = await createRequestIfNeeded();
 
-            await apiBulkCreateStudents(excelRows, user?.tenant_id, activeReqId);
+            await apiBulkCreateStudents(excelRows, selectedTenantId, activeReqId);
             setRowSuccess(`${excelRows.length} students uploaded!`);
             setExcelRows(null);
             setTimeout(() => setRowSuccess(""), 3000);
@@ -378,9 +398,44 @@ export default function CreateRequest() {
                 <div className="bg-white border border-gray-200 rounded-xl p-6">
                     <h2 className="text-base font-semibold text-gray-800 mb-5">Request Details</h2>
                     <form onSubmit={handleCreateRequest} className="space-y-5">
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-700">
-                            <strong>School:</strong> {user?.tenant_name || "Not assigned"}&nbsp;·&nbsp;<strong>By:</strong> {user?.full_name}
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-700 flex justify-between items-center">
+                            <div><strong>Author:</strong> {user?.full_name}</div>
+                            <div><strong>Role:</strong> {user?.role}</div>
                         </div>
+
+                        {isAdmin && (
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Target School / Tenant</label>
+                                <div className="relative">
+                                    <select
+                                        disabled={loadingTenants}
+                                        className="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all appearance-none cursor-pointer uppercase italic tracking-widest"
+                                        value={selectedTenantId}
+                                        onChange={(e) => setSelectedTenantId(e.target.value)}
+                                    >
+                                        <option value="">{loadingTenants ? "Synchronizing Data..." : "Select Target School..."}</option>
+                                        {tenants.map(t => (
+                                            <option key={t.id} value={t.id}>{t.tenant_name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        {loadingTenants ? <Loader2 size={14} className="animate-spin text-indigo-500" /> : <ChevronDown size={14} strokeWidth={3} />}
+                                    </div>
+                                </div>
+                                {tenants.length === 0 && !loadingTenants && (
+                                    <p className="text-[8px] text-amber-600 font-black uppercase mt-1 px-1 flex items-center gap-1">
+                                        <AlertCircle size={10} /> No school records found.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {!isAdmin && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700">
+                                <strong>Target School:</strong> {user?.tenant_name || "Not assigned"}
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Remarks <span className="text-gray-400">(optional)</span></label>
                             <textarea rows={3} value={info.remarks} onChange={e => setInfo(p => ({ ...p, remarks: e.target.value }))}
@@ -525,39 +580,15 @@ export default function CreateRequest() {
                                                 ))}</tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
-                                                {excelRows.map((s, i) => {
-                                                    const ref = useRef();
-                                                    const src = s.photo_url ? (s.photo_url.startsWith("http") ? s.photo_url : `${BASE}${s.photo_url}`) : null;
-                                                    return (
-                                                        <tr key={s._id || i}>
-                                                            <td className="px-3 py-2">
-                                                                {src ? (
-                                                                    <div className="relative w-8 h-8">
-                                                                        <img src={src} alt="" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
-                                                                        <button onClick={() => setExcelRows(p => p.map((r, ri) => ri === i ? { ...r, photo_url: "" } : r))}
-                                                                            className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-white border border-gray-200 rounded-full flex items-center justify-center text-red-400">
-                                                                            <X size={8} />
-                                                                        </button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <button onClick={() => ref.current?.click()} disabled={s._photoUploading}
-                                                                        className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 hover:border-indigo-400 flex items-center justify-center text-gray-300 hover:text-indigo-400 transition-all disabled:opacity-50">
-                                                                        {s._photoUploading ? <Loader2 size={11} className="animate-spin" /> : <Image size={11} />}
-                                                                    </button>
-                                                                )}
-                                                                <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
-                                                                    onChange={(e) => handleExcelRowPhoto(i, e)} />
-                                                            </td>
-                                                            <td className="px-3 py-2 font-medium text-gray-700">{s.admission_no}</td>
-                                                            <td className="px-3 py-2 text-gray-600">{s.first_name}</td>
-                                                            <td className="px-3 py-2 text-gray-500">{s.last_name}</td>
-                                                            <td className="px-3 py-2 text-gray-500">{s.class}</td>
-                                                            <td className="px-3 py-2 text-gray-500">{s.section}</td>
-                                                            <td className="px-3 py-2 text-gray-500">{s.dob}</td>
-                                                            <td className="px-3 py-2 text-gray-500">{s.blood_group}</td>
-                                                        </tr>
-                                                    );
-                                                })}
+                                                {excelRows.map((s, i) => (
+                                                    <ExcelPhotoRow
+                                                        key={s._id || i}
+                                                        s={s}
+                                                        idx={i}
+                                                        onPhotoChange={(e) => handleExcelRowPhoto(i, e)}
+                                                        onPhotoClear={() => setExcelRows(p => p.map((r, ri) => ri === i ? { ...r, photo_url: "" } : r))}
+                                                    />
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>

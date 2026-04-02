@@ -80,7 +80,12 @@ export default function TicketingLayout() {
                         {/* Navigation Section */}
                         <div className="space-y-1">
                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2 px-2">Workspace</p>
-                            <NavItem to="/ticketing" icon={LayoutDashboard} label="Overview" end />
+                            <NavItem 
+                                to="/ticketing" 
+                                icon={LayoutDashboard} 
+                                label={user?.role === 'DEVELOPER' ? 'Dev Terminal' : user?.role === 'SUPPORT' ? 'Support Ops' : 'Overview'} 
+                                end 
+                            />
                             <NavItem to="/ticketing/list" icon={Ticket} label="Tickets" />
                             <NavItem to="/ticketing/new" icon={PlusCircle} label="Create Case" />
                         </div>

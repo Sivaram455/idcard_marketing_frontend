@@ -234,7 +234,7 @@ export default function SchoolDetail() {
                             </div>
                             <div className="flex items-center justify-between py-2 border-b border-slate-50">
                                 <span className="text-xs text-slate-400 font-medium">Total Students</span>
-                                <span className="text-xs font-semibold text-slate-700">{school.studentscount || '—'}</span>
+                                <span className="text-xs font-semibold text-slate-700">{school.studnetscount || school.studentscount || '—'}</span>
                             </div>
                             <div className="flex items-center justify-between py-2">
                                 <span className="text-xs text-slate-400 font-medium">Demo Required</span>
