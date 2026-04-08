@@ -1,6 +1,6 @@
 export const BACKEND_URL = 'https://supportsmartschoolserp.com';
-//const BASE_URL = `${BACKEND_URL}/api`;
-const BASE_URL = 'http://localhost:5001/api';
+const BASE_URL = `${BACKEND_URL}/api`;
+// const BASE_URL = 'http://localhost:5001/api';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
