@@ -3,7 +3,7 @@ import { useAuth } from "../../auth/AuthContext";
 import {
     LayoutDashboard, Users, UserPlus,
     FileText, Calendar, LogOut,
-    Megaphone, ChevronLeft, User, ShoppingCart
+    Megaphone, ChevronLeft, User, ShoppingCart, BarChart3
 } from "lucide-react";
 
 const ROLE_LABELS = {
@@ -104,6 +104,7 @@ export default function MarketingLayout() {
 
                         <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest px-3 pb-1.5 pt-3">Sales</p>
                         <NavItem to="/marketing/orders" icon={ShoppingCart} label="Order Booking" />
+                        <NavItem to="/marketing/agent-analytics/me" icon={BarChart3} label="Performance" />
                     </div>
 
                     {/* User card at bottom */}

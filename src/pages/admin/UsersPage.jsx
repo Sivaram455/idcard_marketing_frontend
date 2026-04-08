@@ -293,7 +293,7 @@ export default function UsersPage() {
                             <F label="Access Email (Locked)" value={form.email} ch={(v) => set("email", v)} ph="email@example.com" type="email" disabled={!!editing} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <F label="Contact Number" value={form.phone} ch={(v) => set("phone", v)} ph="+91 XXXXXXXXXX" />
+                            <F label="Contact Number" value={form.phone} ch={(v) => set("phone", v.replace(/\D/g, '').slice(0, 10))} ph="10 Digit Mobile Number" />
                             {!editing && <F label="Initial Credentials" value={form.password} ch={(v) => set("password", v)} ph="Secure Password" type="password" />}
                         </div>
                         <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-6">

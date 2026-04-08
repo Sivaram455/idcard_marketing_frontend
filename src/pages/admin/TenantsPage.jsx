@@ -279,7 +279,7 @@ export default function TenantsPage() {
 
                                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-5">
                                     <F label="Administrative Email" value={form.contact_email} ch={(v) => set("contact_email", v)} ph="admin@school.com" type="email" />
-                                    <F label="Direct Contact" value={form.contact_phone} ch={(v) => set("contact_phone", v)} ph="+91 XXXXXX" />
+                                    <F label="Direct Contact" value={form.contact_phone} ch={(v) => set("contact_phone", v.replace(/\D/g, '').slice(0, 10))} ph="10 Digit Mobile Number" />
                                 </div>
 
                                 {editing && (

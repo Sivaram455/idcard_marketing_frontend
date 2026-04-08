@@ -3,15 +3,10 @@ import { apiCreateMarketingSchool, apiUpdateMarketingSchool, apiGetMarketingScho
 import { useToast } from "../../components/common/Toast";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
-    ChevronLeft, CreditCard, User, Mail, 
-    Phone, MapPin, MessageSquare, Loader2, Save,
-    PlusCircle, Building2, Shield, Target, GraduationCap,
-    LayoutGrid, ChevronDown, CheckCircle, Boxes, X
+    ChevronLeft, Building2, User, Phone, 
+    Mail, MapPin, Loader2, CheckCircle, 
+    Globe, Users, Layers, MessageSquare, Save, X
 } from "lucide-react";
-
-// Dense UI Constants
-const inputCls = "w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all duration-200";
-const labelCls = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-0.5";
 
 const INTEREST_OPTIONS = [
     "Admission Management", "Student Information System", "Attendance (Student)",
@@ -19,19 +14,23 @@ const INTEREST_OPTIONS = [
     "Report Cards", "Timetable", "Homework / Assignments", "Parent Portal",
     "Student Portal", "Teacher Portal", "Transport Management", "Hostel Management",
     "Library Management", "HR & Payroll", "Inventory", "SMS / WhatsApp Alerts",
-    "Mobile App Required", "ID Card"
+    "Mobile App Required", "ID Card", "Website"
 ];
 
+// Simple, clean styles
+const inputCls = "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all";
+const labelCls = "block text-xs font-medium text-gray-500 mb-1.5";
+
 const Field = ({ label, children, className = "", error }) => (
-    <div className={`space-y-0.5 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
         <label className={labelCls}>{label}</label>
         {children}
-        {error && <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mt-0.5 ml-1 animate-pulse">{error}</p>}
+        {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
     </div>
 );
 
 export default function AddLead() {
-    const { id } = useParams(); // For edit mode
+    const { id } = useParams();
     const isEdit = !!id;
     const toast = useToast();
     const navigate = useNavigate();
@@ -54,15 +53,12 @@ export default function AddLead() {
         Board: ""
     });
 
-    // Helper to get selected interests as array
     const selectedInterests = formData.interested_in 
         ? formData.interested_in.split(',').map(i => i.trim()).filter(Boolean)
         : [];
 
     useEffect(() => {
-        if (isEdit) {
-            fetchLeadData();
-        }
+        if (isEdit) fetchLeadData();
     }, [id]);
 
     const fetchLeadData = async () => {
@@ -86,7 +82,7 @@ export default function AddLead() {
                 });
             }
         } catch (err) {
-            toast.error("Resource acquisition failed");
+            toast.error("Failed to load lead details");
             navigate("/marketing/leads");
         } finally {
             setFetching(false);
@@ -94,63 +90,44 @@ export default function AddLead() {
     };
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        let { name, value } = e.target;
+        if (name === "mobile") value = value.replace(/\D/g, '').slice(0, 10);
         setFormData({ ...formData, [name]: value });
-        // Clear error when user types
-        if (errors[name]) {
-            setErrors({ ...errors, [name]: "" });
-        }
-    };
-
-    const validate = () => {
-        const newErrors = {};
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
-        if (formData.email && !emailRegex.test(formData.email)) {
-            newErrors.email = "Invalid email format";
-        }
-        
-        // Mobile validation: check if it's 10 digits
-        if (formData.mobile) {
-            const cleanMobile = formData.mobile.replace(/\D/g, '');
-            if (cleanMobile.length !== 10) {
-                newErrors.mobile = "Mobile must be 10 digits";
-            }
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        if (errors[name]) setErrors({ ...errors, [name]: "" });
     };
 
     const toggleInterest = (opt) => {
         let current = [...selectedInterests];
-        if (current.includes(opt)) {
-            current = current.filter(i => i !== opt);
-        } else {
-            current.push(opt);
-        }
+        if (current.includes(opt)) current = current.filter(i => i !== opt);
+        else current.push(opt);
         setFormData({ ...formData, interested_in: current.join(',') });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate()) {
-            toast.error("Please correct errors in form");
-            return;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const newErrors = {};
+        if (formData.email && !emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
+        if (formData.mobile && formData.mobile.length !== 10) newErrors.mobile = "Mobile must be 10 digits";
+        
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return toast.error("Please fix the errors in the form.");
         }
+
         setLoading(true);
         try {
             if (isEdit) {
                 await apiUpdateMarketingSchool(id, formData);
-                toast.success("Operational data updated");
-                setTimeout(() => navigate(`/marketing/schools/${id}`), 1000);
+                toast.success("Lead updated successfully");
+                setTimeout(() => navigate(`/marketing/schools/${id}`), 500);
             } else {
                 await apiCreateMarketingSchool(formData);
-                toast.success("Lead registered in pipeline");
-                setTimeout(() => navigate('/marketing/leads'), 1000);
+                toast.success("Lead registered successfully");
+                setTimeout(() => navigate('/marketing/leads'), 500);
             }
         } catch (err) {
-            toast.error(err.message || `Deployment error`);
+            toast.error(err.message || `Failed to save lead`);
         } finally {
             setLoading(false);
         }
@@ -158,203 +135,201 @@ export default function AddLead() {
 
     if (fetching) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400">
-                <div className="relative mb-4">
-                    <div className="w-10 h-10 rounded-full border-4 border-indigo-100 border-t-indigo-500 animate-spin" />
-                    <Target size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-500" />
-                </div>
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse font-outfit">Retrieving Lead Intel...</p>
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-400 gap-3">
+                <Loader2 size={28} className="animate-spin text-indigo-500" />
+                <p className="text-sm">Loading lead data...</p>
             </div>
         );
     }
 
     return (
-        <div className="p-4 max-w-7xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="p-5 max-w-6xl mx-auto pb-12">
             
-            {/* Header Section - More Compact */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => navigate(-1)} 
-                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
-                    >
-                        <ChevronLeft size={18} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                            <Shield size={12} className="text-indigo-500" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Pipeline Registry</span>
-                        </div>
-                        <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">
-                            {isEdit ? "Update" : "Register"} <span className="text-indigo-600">Lead</span>
-                        </h1>
-                    </div>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <div>
+                    <h1 className="text-lg font-semibold text-gray-900">
+                        {isEdit ? "Update Lead" : "New Lead Registration"}
+                    </h1>
+                    <p className="text-xs text-gray-400 mt-0.5">Fill in the school and contact details below</p>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 
-                {/* Main Form Fields */}
-                <div className="lg:col-span-12 xl:col-span-12 space-y-5">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-8 divide-x divide-slate-50">
-                            
-                            {/* Left Column: Institutional & Context */}
-                            <div className="space-y-6">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Building2 size={13} className="text-indigo-500" />
-                                        <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest font-outfit">Institutional Context</h3>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="md:col-span-2">
-                                            <Field label="School Name *">
-                                                <input required name="school_name" value={formData.school_name} onChange={handleChange} className={inputCls} placeholder="Establishment Name" />
-                                            </Field>
-                                        </div>
-                                        <Field label="City">
-                                            <input name="city" value={formData.city} onChange={handleChange} className={inputCls} placeholder="City" />
-                                        </Field>
-                                        <Field label="State">
-                                            <input name="state" value={formData.state} onChange={handleChange} className={inputCls} placeholder="Region" />
-                                        </Field>
-                                        <Field label="Board">
-                                            <select name="Board" value={formData.Board} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select Board</option>
-                                                <option>CBSE</option>
-                                                <option>ICSE</option>
-                                                <option>State Board</option>
-                                                <option>IB</option>
-                                                <option>IGCSE</option>
-                                                <option>Other</option>
-                                            </select>
-                                        </Field>
-                                        <Field label="Total Students">
-                                            <input name="studentscount" value={formData.studentscount} onChange={handleChange} className={inputCls} placeholder="e.g. 500" type="text" />
-                                        </Field>
-                                        <Field label="Demo Required">
-                                            <select name="demorequire" value={formData.demorequire} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select</option>
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
-                                                <option value="Already Done">Already Done</option>
-                                            </select>
-                                        </Field>
-                                        <div className="md:col-span-2">
-                                            <Field label="Physical Address">
-                                                <textarea name="address" value={formData.address} onChange={handleChange} rows="2" className={`${inputCls} resize-none min-h-[50px]`} placeholder="Street, Building..." />
-                                            </Field>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 pt-2">
-                                    <div className="flex items-center gap-2 mb-2 border-t border-slate-50 pt-4">
-                                        <GraduationCap size={13} className="text-rose-500" />
-                                        <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest font-outfit">Contact Intel</h3>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <Field label="Primary Decision Maker">
-                                            <input required name="contact_person1" value={formData.contact_person1} onChange={handleChange} className={inputCls} placeholder="Full Name" />
-                                        </Field>
-                                        <Field label="Direct Connectivity (Mobile)" error={errors.mobile}>
-                                            <input name="mobile" value={formData.mobile} onChange={handleChange} className={`${inputCls} ${errors.mobile ? 'border-rose-400 focus:border-rose-500' : ''}`} placeholder="10 Digits" />
-                                        </Field>
-                                        <Field label="Secondary Liaison">
-                                            <input name="contact_person2" value={formData.contact_person2} onChange={handleChange} className={inputCls} placeholder="Alt Name" />
-                                        </Field>
-                                        <Field label="Official Email Protocol" error={errors.email}>
-                                            <input name="email" type="email" value={formData.email} onChange={handleChange} className={`${inputCls} ${errors.email ? 'border-rose-400 focus:border-rose-500' : ''}`} placeholder="school@domain.com" />
-                                        </Field>
-                                    </div>
-                                </div>
+                {/* Left: Main Details (2 Columns on Desktop) */}
+                <div className="lg:col-span-2 space-y-5">
+                    
+                    {/* School Section */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <Building2 size={14} />
                             </div>
-
-                            {/* Right Column: Module Interest Multi-Select */}
-                            <div className="lg:pl-8 space-y-6">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Boxes size={13} className="text-indigo-500" />
-                                        <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest font-outfit">Module Interest (Multi-Select)</h3>
-                                    </div>
-                                    
-                                    <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 max-h-[280px] overflow-y-auto scrollbar-thin">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
-                                            {INTEREST_OPTIONS.map(opt => {
-                                                const active = selectedInterests.includes(opt);
-                                                return (
-                                                    <button 
-                                                        key={opt}
-                                                        type="button"
-                                                        onClick={() => toggleInterest(opt)}
-                                                        className={`flex items-center gap-2 group p-1.5 rounded-lg transition-all text-left ${active ? 'bg-indigo-600 text-white shadow-sm' : 'hover:bg-indigo-50 text-slate-500'}`}
-                                                    >
-                                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all ${active ? 'bg-white border-white' : 'bg-white border-slate-200 group-hover:border-indigo-300'}`}>
-                                                            {active && <CheckCircle size={10} className="text-indigo-600" strokeWidth={4} />}
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-tight truncate leading-none">
-                                                            {opt}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Selection Count / Multi-Tags */}
-                                    <div className="mt-3 flex flex-wrap gap-1.5">
-                                        {selectedInterests.length === 0 ? (
-                                            <p className="text-[9px] text-slate-300 font-bold uppercase italic tracking-widest">No modules identified yet...</p>
-                                        ) : (
-                                            <div className="flex items-center gap-1.5 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">{selectedInterests.length} MODULES IDENTIFIED</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 pt-2">
-                                    <Field label="Intelligence Summary / Internal Notes">
-                                        <textarea 
-                                            name="comments" 
-                                            value={formData.comments} 
-                                            onChange={handleChange} 
-                                            rows="4" 
-                                            className={`${inputCls} resize-none italic text-slate-500 font-medium`} 
-                                            placeholder="Competitor presence, specific pain points, negotiation status..." 
-                                        />
-                                    </Field>
-                                </div>
-                            </div>
+                            <h2 className="text-sm font-semibold text-gray-800">School Details</h2>
                         </div>
-
-                        {/* Control Footer - Tighter */}
-                        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest max-w-sm italic">
-                                Registry operational check: ensure institutional accuracy before commitment.
-                            </p>
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    type="button" 
-                                    onClick={() => navigate(-1)} 
-                                    className="px-4 py-2 text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors italic font-outfit"
-                                >
-                                    Abort
-                                </button>
-                                <button 
-                                    disabled={loading} 
-                                    type="submit" 
-                                    className="bg-slate-900 hover:bg-indigo-600 disabled:bg-slate-100 disabled:text-slate-400 text-white font-black uppercase tracking-[0.15em] italic py-2.5 px-6 rounded-xl shadow-lg shadow-slate-900/10 hover:shadow-indigo-500/20 transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.98] font-outfit text-[10px]"
-                                >
-                                    {loading ? (
-                                        <><Loader2 size={13} className="animate-spin" /> Synchronizing...</>
-                                    ) : (
-                                        <>{isEdit ? <Save size={13} strokeWidth={3} /> : <CheckCircle size={13} strokeWidth={3} />} {isEdit ? "Update Command" : "Initialize Lead"}</>
-                                    )}
-                                </button>
-                            </div>
+                        
+                        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Field label="School Name *" className="md:col-span-2">
+                                <input required name="school_name" value={formData.school_name} onChange={handleChange} className={inputCls} placeholder="Enter school name" />
+                            </Field>
+                            <Field label="City">
+                                <input name="city" value={formData.city} onChange={handleChange} className={inputCls} placeholder="City" />
+                            </Field>
+                            <Field label="State">
+                                <input name="state" value={formData.state} onChange={handleChange} className={inputCls} placeholder="State" />
+                            </Field>
+                            <Field label="Education Board">
+                                <select name="Board" value={formData.Board} onChange={handleChange} className={inputCls}>
+                                    <option value="">Select Board</option>
+                                    <option>CBSE</option>
+                                    <option>ICSE</option>
+                                    <option>State Board</option>
+                                    <option>IB</option>
+                                    <option>IGCSE</option>
+                                    <option>Other</option>
+                                </select>
+                            </Field>
+                            <Field label="Total Students (Approx)">
+                                <input name="studentscount" value={formData.studentscount} onChange={handleChange} className={inputCls} placeholder="e.g. 500" />
+                            </Field>
+                            <Field label="Is Demo Required?">
+                                <select name="demorequire" value={formData.demorequire} onChange={handleChange} className={inputCls}>
+                                    <option value="">Select</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                    <option value="Already Done">Already Done</option>
+                                </select>
+                            </Field>
+                            <Field label="Full Address" className="md:col-span-2">
+                                <textarea name="address" value={formData.address} onChange={handleChange} rows="2" className={`${inputCls} resize-none`} placeholder="Complete school address..." />
+                            </Field>
                         </div>
+                    </div>
+
+                    {/* Contact Section */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                <User size={14} />
+                            </div>
+                            <h2 className="text-sm font-semibold text-gray-800">Contact Person</h2>
+                        </div>
+                        
+                        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Field label="Primary Contact Name *">
+                                <input required name="contact_person1" value={formData.contact_person1} onChange={handleChange} className={inputCls} placeholder="Full name of Principal/Admin" />
+                            </Field>
+                            <Field label="Mobile Number" error={errors.mobile}>
+                                <div className="relative">
+                                    <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input name="mobile" value={formData.mobile} onChange={handleChange} className={`${inputCls} pl-9`} placeholder="10-digit number" />
+                                </div>
+                            </Field>
+                            <Field label="Secondary Contact Name">
+                                <input name="contact_person2" value={formData.contact_person2} onChange={handleChange} className={inputCls} placeholder="Alternative contact name" />
+                            </Field>
+                            <Field label="Official Email" error={errors.email}>
+                                <div className="relative">
+                                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input name="email" type="email" value={formData.email} onChange={handleChange} className={`${inputCls} pl-9`} placeholder="school@example.com" />
+                                </div>
+                            </Field>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Modules & Interests */}
+                <div className="space-y-5">
+                    
+                    {/* Modules Checklist */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[520px]">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                    <Layers size={14} />
+                                </div>
+                                <h2 className="text-sm font-semibold text-gray-800">Interests</h2>
+                            </div>
+                            {selectedInterests.length > 0 && (
+                                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {selectedInterests.length} Selected
+                                </span>
+                            )}
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-4 space-y-1.5 scrollbar-thin">
+                            {INTEREST_OPTIONS.map(opt => {
+                                const active = selectedInterests.includes(opt);
+                                return (
+                                    <button 
+                                        key={opt}
+                                        type="button"
+                                        onClick={() => toggleInterest(opt)}
+                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all border ${
+                                            active 
+                                                ? 'bg-indigo-600 border-indigo-600 text-white' 
+                                                : 'bg-white border-transparent hover:bg-gray-50 text-gray-600 hover:border-gray-100'
+                                        }`}
+                                    >
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                            active ? 'bg-white border-white' : 'bg-gray-100 border-gray-200'
+                                        }`}>
+                                            {active && <CheckCircle size={10} className="text-indigo-600" strokeWidth={4} />}
+                                        </div>
+                                        <span className="text-xs font-medium truncate">{opt}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Notes Section */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                                <MessageSquare size={14} />
+                            </div>
+                            <h2 className="text-sm font-semibold text-gray-800">Internal Notes</h2>
+                        </div>
+                        <div className="p-4">
+                            <textarea 
+                                name="comments" 
+                                value={formData.comments} 
+                                onChange={handleChange} 
+                                rows="4" 
+                                className={`${inputCls} resize-none text-xs`} 
+                                placeholder="Any specific requirements or follow-up notes..." 
+                            />
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-3 pt-2">
+                        <button 
+                            disabled={loading} 
+                            type="submit" 
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 text-white text-sm font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            {loading ? (
+                                <><Loader2 size={16} className="animate-spin" /> Saving...</>
+                            ) : (
+                                <>{isEdit ? <Save size={16} /> : <CheckCircle size={16} />} {isEdit ? "Update Lead" : "Register Lead"}</>
+                            )}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => navigate(-1)} 
+                            className="w-full text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors py-2"
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             </form>

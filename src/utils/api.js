@@ -1,5 +1,6 @@
-const BASE_URL = 'https://supportsmartschoolserp.com/api';
-//const BASE_URL = 'http://localhost:5001/api';
+export const BACKEND_URL = 'https://supportsmartschoolserp.com';
+//const BASE_URL = `${BACKEND_URL}/api`;
+const BASE_URL = 'http://localhost:5001/api';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -228,6 +229,12 @@ export const apiGetMarketingSchools = async () => {
     return handleResponse(res);
 };
 
+// Admin-only: returns ALL schools regardless of agent role (for Assign Leads page)
+export const apiGetAllMarketingSchools = async () => {
+    const res = await fetch(`${BASE_URL}/marketing/schools/all`, { headers: getHeaders() });
+    return handleResponse(res);
+};
+
 export const apiCreateMarketingSchool = async (data) => {
     const res = await fetch(`${BASE_URL}/marketing/schools`, {
         method: 'POST',
@@ -285,6 +292,11 @@ export const apiUpdateActivityStatus = async (id, status) => {
         headers: getHeaders(),
         body: JSON.stringify({ status }),
     });
+    return handleResponse(res);
+};
+
+export const apiGetAgentStats = async (id) => {
+    const res = await fetch(`${BASE_URL}/marketing/agent/${id}/stats`, { headers: getHeaders() });
     return handleResponse(res);
 };
 
@@ -368,3 +380,51 @@ export const apiDeleteOrder = async (id) => {
     });
     return handleResponse(res);
 };
+
+// ─── Payments ─────────────────────────────────────────────────
+export const apiCreateRzpOrder = async (order_id, amount) => {
+    const res = await fetch(`${BASE_URL}/payments/create-order`, {
+        method: 'POST', headers: getHeaders(),
+        body: JSON.stringify({ order_id, amount }),
+    });
+    return handleResponse(res);
+};
+
+export const apiVerifyRzpPayment = async (data) => {
+    const res = await fetch(`${BASE_URL}/payments/verify-payment`, {
+        method: 'POST', headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+};
+
+export const apiRecordCashPayment = async (order_id, amount) => {
+    const res = await fetch(`${BASE_URL}/payments/record-cash`, {
+        method: 'POST', headers: getHeaders(),
+        body: JSON.stringify({ order_id, amount }),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetOrderPayments = async (order_id) => {
+    const res = await fetch(`${BASE_URL}/payments/history/${order_id}`, {
+        headers: getHeaders(),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetAllPayments = async () => {
+    const res = await fetch(`${BASE_URL}/payments/all-history`, {
+        headers: getHeaders(),
+    });
+    return handleResponse(res);
+};
+
+export const apiGetPaymentStats = async () => {
+    const res = await fetch(`${BASE_URL}/payments/stats`, {
+        headers: getHeaders(),
+    });
+    return handleResponse(res);
+};
+
+

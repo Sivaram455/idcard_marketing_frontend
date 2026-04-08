@@ -4,8 +4,9 @@ import { apiGetMarketingSchools, apiGetUsers } from "../../utils/api";
 import {
     Search, Plus, MapPin, RefreshCw, Edit3, Building2,
     X, ChevronRight, TrendingUp, Users, Clock, CheckCircle,
-    User, Layers
+    User, Layers, ShoppingCart
 } from "lucide-react";
+
 
 const STATUS = {
     new:      { label: "New",       color: "bg-blue-100 text-blue-700",    dot: "bg-blue-500" },
@@ -344,6 +345,13 @@ export default function MarketingLeads() {
                                         </div>
 
                                         <div className="flex items-center justify-center gap-1">
+                                            {school.status === 'closed' && (
+                                                <button onClick={e => { e.stopPropagation(); navigate(`/marketing/order-booking?school_id=${school.id}`); }}
+                                                    title="Create Order"
+                                                    className="p-1.5 rounded-lg text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+                                                    <ShoppingCart size={14} />
+                                                </button>
+                                            )}
                                             <button onClick={e => { e.stopPropagation(); navigate(`/marketing/schools/${school.id}`); }}
                                                 className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
                                                 <ChevronRight size={14} />
@@ -353,6 +361,7 @@ export default function MarketingLeads() {
                                                 <Edit3 size={13} />
                                             </button>
                                         </div>
+
                                     </div>
                                 );
                             })}

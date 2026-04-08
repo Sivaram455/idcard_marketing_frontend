@@ -71,7 +71,7 @@ export default function IDCardDashboard() {
 
         let actionableCount = 0;
         if (isAdmin)                  actionableCount = requests.filter(r => ["SUBMITTED","SCHOOL_VERIFIED"].includes(r.status)).length;
-        else if (user?.role === "printer") actionableCount = requests.filter(r => ["GMMC_APPROVED","PRINTER_APPROVED", "GMMC_VERIFIED"].includes(r.status)).length;
+        else if (user?.role === "printer") actionableCount = requests.filter(r => ["GMMC_APPROVED","PRINTER_APPROVED", "GMMC_VERIFIED", "BULK_PRINT_APPROVED"].includes(r.status)).length;
         else if (user?.role === "school")  actionableCount = requests.filter(r => r.status === "SAMPLE_UPLOADED").length;
 
         return { total, completed, rejected, inProgress, totalStudents, printedStudents, actionableCount };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"; 
 import { useParams, useNavigate } from "react-router-dom"; 
 import { useAuth } from "../../auth/AuthContext"; 
-import { apiGetRequestById, apiCreateApproval, apiCreateSample, apiUploadFile, apiDispatchRequest } from "../../utils/api"; 
+import { apiGetRequestById, apiCreateApproval, apiCreateSample, apiUploadFile, apiDispatchRequest, BACKEND_URL } from "../../utils/api"; 
 import { 
     ArrowLeft, FileText, Users, Image as ImageIcon, Clock, RefreshCw, 
     CheckCircle, XCircle, AlertCircle, Upload, Loader2, Check, 
@@ -9,7 +9,7 @@ import {
 } from "lucide-react"; 
 import ImageModal from "./ImageModal";
 
-const BASE = "http://localhost:5001"; 
+const BASE = BACKEND_URL; 
 
 const STATUS_CFG = { 
     SUBMITTED: { label: "Submitted", color: "bg-blue-50 text-blue-700", step: 0 }, 
@@ -32,7 +32,8 @@ const getAction = (role, status) => {
     if (role === "printer" && status === "GMMC_APPROVED") return { stage: "GMMC_APPROVED", display: "PRINTER", type: "review", next: "Accept Job" }; 
     if (role === "printer" && status === "PRINTER_APPROVED") return { stage: "PRINTER_APPROVED", display: "PRINTER", type: "sample", next: "Upload Digital Proof" }; 
     if (role === "school" && status === "SAMPLE_UPLOADED") return { stage: "SAMPLE_UPLOADED", display: "SCHOOL", type: "review", next: "Verify Proof" }; 
-    if (role === "admin" && status === "GMMC_VERIFIED") return { stage: "GMMC_VERIFIED", display: "BULK PRINT", type: "review", next: "Authorize Bulk Print" }; 
+    if (role === "admin" && status === "GMMC_VERIFIED") return null; // Admin finished at GMMC Final
+    if (role === "printer" && status === "GMMC_VERIFIED") return { stage: "GMMC_VERIFIED", display: "PRINTER", type: "review", next: "Approve Printing" }; 
     if (role === "printer" && status === "BULK_PRINT_APPROVED") return { stage: "BULK_PRINT_APPROVED", display: "DISPATCH", type: "dispatch", next: "Confirm Logistics" }; 
     return null; 
 }; 

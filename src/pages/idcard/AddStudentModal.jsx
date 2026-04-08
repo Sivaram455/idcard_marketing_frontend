@@ -3,7 +3,7 @@ import {
     X, UserPlus, Loader2, Check, AlertCircle, 
     Image, Upload, FileSpreadsheet, Download 
 } from "lucide-react";
-import { apiAddStudent, apiBulkCreateStudents, apiUploadFile } from "../../utils/api";
+import { apiAddStudent, apiBulkCreateStudents, apiUploadFile, BACKEND_URL } from "../../utils/api";
 import * as XLSX from "xlsx";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
@@ -11,7 +11,7 @@ const EMPTY_STUDENT = {
     admission_no: "", first_name: "", last_name: "",
     class: "", section: "", roll_no: "", dob: "", blood_group: "", photo_url: "",
 };
-const BASE = "http://localhost:5001";
+const BASE = BACKEND_URL;
 
 export default function AddStudentModal({ isOpen, onClose, requestId, tenantId, onAdded }) {
     const [mode, setMode] = useState("MANUAL"); // MANUAL or BULK

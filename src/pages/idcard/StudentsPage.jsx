@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import {
     apiGetStudentsByRequest, apiBulkCreateStudents,
-    apiAddStudent, apiDeleteStudent, apiUploadFile
+    apiAddStudent, apiDeleteStudent, apiUploadFile, BACKEND_URL
 } from "../../utils/api";
 import * as XLSX from "xlsx";
 import {
@@ -17,7 +17,7 @@ const EMPTY_STUDENT = {
     admission_no: "", first_name: "", last_name: "",
     class: "", section: "", roll_no: "", dob: "", blood_group: "", photo_url: "",
 };
-const BASE = "http://localhost:5001";
+const BASE = BACKEND_URL;
 
 // ── Photo upload button with preview ─────────────────────────────────────────
 function PhotoPicker({ value, onChange }) {

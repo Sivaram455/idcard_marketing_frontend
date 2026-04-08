@@ -94,7 +94,7 @@ export default function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <ProfileField icon={<User size={18}/>} label="Full Name" value={profile.name} isEditing={isEditing} onChange={(val) => handleChange('name', val)} />
               <ProfileField icon={<Mail size={18}/>} label="Email Address" value={profile.email} isEditing={isEditing} onChange={(val) => handleChange('email', val)} />
-              <ProfileField icon={<Phone size={18}/>} label="Mobile Number" value={profile.phone} isEditing={isEditing} onChange={(val) => handleChange('phone', val)} />
+              <ProfileField icon={<Phone size={18}/>} label="Mobile Number" value={profile.phone?.replace(/\D/g, '').slice(0, 10)} isEditing={isEditing} onChange={(val) => handleChange('phone', val.replace(/\D/g, '').slice(0, 10))} />
               <ProfileField icon={<MapPin size={18}/>} label="Base Location" value={profile.location} isEditing={isEditing} onChange={(val) => handleChange('location', val)} />
             </div>
 

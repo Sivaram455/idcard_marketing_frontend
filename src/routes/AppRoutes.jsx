@@ -19,6 +19,7 @@ import MarketingLeads from "../pages/marketing/MarketingLeads";
 import SchoolDetail from "../pages/marketing/SchoolDetail";
 import AssignLeads from "../pages/marketing/AssignLeads";
 import OrderBooking from "../pages/marketing/OrderBooking";
+import AgentAnalytics from "../pages/marketing/AgentAnalytics";
 
 import AdminPortal from "../pages/AdminPortal";
 
@@ -82,6 +83,8 @@ export default function AppRoutes() {
           <Route path="/marketing/messages" element={<Messages />} />
           <Route path="/marketing/profile" element={<Profile />} />
           <Route path="/marketing/orders" element={<OrderBooking />} />
+          <Route path="/marketing/agent-analytics/:id" element={<AgentAnalytics />} />
+          <Route path="/marketing/agent-analytics/me" element={<AgentAnalytics />} />
         </Route>
       </Route>
 

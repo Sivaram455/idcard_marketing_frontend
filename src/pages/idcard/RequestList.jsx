@@ -58,7 +58,7 @@ export default function RequestList() {
 
     const isActionable = (status) => {
         if (isAdmin)                  return ["SUBMITTED", "SCHOOL_VERIFIED"].includes(status);
-        if (user?.role === "printer") return ["GMMC_APPROVED", "PRINTER_APPROVED", "GMMC_VERIFIED"].includes(status);
+        if (user?.role === "printer") return ["GMMC_APPROVED", "PRINTER_APPROVED", "GMMC_VERIFIED", "BULK_PRINT_APPROVED"].includes(status);
         if (user?.role === "school")  return status === "SAMPLE_UPLOADED";
         return false;
     };

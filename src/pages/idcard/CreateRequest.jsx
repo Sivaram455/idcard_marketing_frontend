@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { apiCreateRequest, apiBulkCreateStudents, apiAddStudent, apiUploadFile, apiGetTenants } from "../../utils/api";
+import { apiCreateRequest, apiBulkCreateStudents, apiAddStudent, apiUploadFile, apiGetTenants, BACKEND_URL } from "../../utils/api";
 import * as XLSX from "xlsx";
 import {
     ChevronLeft, ChevronRight, Check, Upload, Download,
@@ -21,7 +21,7 @@ const BLANK_ROW = () => ({
 const MAX_MB = 5;
 const MAX_BYTES = MAX_MB * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const BASE = "http://localhost:5001";
+const BASE = BACKEND_URL;
 
 // ── Image upload for school-level assets ──────────────────────────────────────
 function ImageUploadField({ label, folder, value, onChange }) {

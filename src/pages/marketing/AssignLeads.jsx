@@ -1,24 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { apiGetMarketingSchools, apiGetUsers, apiAssignSchool } from "../../utils/api";
+import { apiGetAllMarketingSchools, apiGetUsers, apiAssignSchool } from "../../utils/api";
 import { useToast } from "../../components/common/Toast";
-import { 
-    UserPlus, School, User, Calendar, 
-    CheckCircle, ChevronLeft, ChevronDown, 
-    Loader2, Users, Info, Building2, Search,
-    Briefcase, Target, Shield, ArrowRight, TrendingUp
+import {
+    UserPlus, Building2, Search, Users,
+    CheckCircle, Loader2, Calendar, Info,
+    TrendingUp, ArrowRight, ChevronLeft, X, BarChart3
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-// Dense UI Constants
-const inputCls = "w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all duration-200";
-const labelCls = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-0.5 font-outfit";
-
-const Field = ({ label, children }) => (
-    <div className="space-y-0.5">
-        <label className={labelCls}>{label}</label>
-        {children}
-    </div>
-);
 
 export default function AssignLeads() {
     const toast = useToast();
@@ -31,324 +19,357 @@ export default function AssignLeads() {
     const [formData, setFormData] = useState({
         school_id: "",
         agent_id: "",
-        assigned_date: new Date().toISOString().split('T')[0]
+        assigned_date: new Date().toISOString().split("T")[0],
     });
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    useEffect(() => { fetchData(); }, []);
 
     const fetchData = async () => {
         setFetching(true);
         try {
             const [schoolsRes, usersRes] = await Promise.all([
-                apiGetMarketingSchools(),
-                apiGetUsers()
+                apiGetAllMarketingSchools(),
+                apiGetUsers(),
             ]);
-            // Only show schools that haven't been assigned yet for the selection
             setSchools(schoolsRes.data || []);
-            // Filter only agent/marketing roles
-            const filteredAgents = usersRes.data?.filter(u => 
-                ['AGENT', 'agent', 'marketing', 'MARKETING', 'GMMC_ADMIN'].includes(u.role)
+            const filteredAgents = usersRes.data?.filter((u) =>
+                ["AGENT", "agent", "marketing", "MARKETING", "GMMC_ADMIN"].includes(u.role)
             ) || [];
             setAgents(filteredAgents);
-        } catch (err) {
-            toast.error("Network synchronization error");
+        } catch {
+            toast.error("Failed to load data. Please refresh.");
         } finally {
             setFetching(false);
         }
     };
 
     const handleAssign = async (e) => {
-        if (e) e.preventDefault();
-        if(!formData.school_id || !formData.agent_id) return toast.error("Operational target required");
+        e.preventDefault();
+        if (!formData.school_id || !formData.agent_id)
+            return toast.error("Please select both a school and an agent.");
 
         setLoading(true);
         try {
             await apiAssignSchool(formData);
-            toast.success("Lead successfully deployed");
-            setFormData(prev => ({ ...prev, school_id: "" }));
+            toast.success("Lead assigned successfully!");
+            setFormData((prev) => ({ ...prev, school_id: "" }));
             fetchData();
         } catch (err) {
-            toast.error(err.message || "Deployment failed");
+            toast.error(err.message || "Failed to assign lead.");
         } finally {
             setLoading(false);
         }
     };
 
-    const unassignedSchools = useMemo(() => 
-        schools.filter(s => !s.assigned_to).sort((a, b) => a.school_name.localeCompare(b.school_name)), 
-    [schools]);
+    const unassignedSchools = useMemo(() =>
+        schools
+            .filter((s) => s.assigned_to == null || s.assigned_to === '' || s.assigned_to === 0)
+            .sort((a, b) => a.school_name.localeCompare(b.school_name)),
+        [schools]
+    );
 
-    const filteredPool = useMemo(() => 
-        unassignedSchools.filter(s => 
-            s.school_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredPool = useMemo(() =>
+        unassignedSchools.filter((s) =>
+            s.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.city?.toLowerCase().includes(searchTerm.toLowerCase())
         ),
-    [unassignedSchools, searchTerm]);
+        [unassignedSchools, searchTerm]
+    );
+
+    const selectedSchool = schools.find((s) => s.id == formData.school_id);
+    const selectedAgent = agents.find((a) => a.id == formData.agent_id);
 
     if (fetching) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400">
-                <div className="relative mb-4">
-                    <div className="w-10 h-10 rounded-full border-4 border-indigo-100 border-t-indigo-500 animate-spin" />
-                    <Target size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-500" />
-                </div>
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse font-outfit">Syncing Network Data...</p>
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-gray-400">
+                <Loader2 size={28} className="animate-spin text-indigo-400" />
+                <p className="text-sm text-gray-400">Loading data...</p>
             </div>
         );
     }
 
     return (
-        <div className="p-4 max-w-6xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            
-            {/* Header Section */}
-            <div className="flex items-end justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => navigate(-1)} 
-                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
-                    >
-                        <ChevronLeft size={18} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                            <Shield size={12} className="text-indigo-500" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Operations Control</span>
-                        </div>
-                        <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase italic leading-none">
-                            Lead <span className="text-indigo-600">Assignment</span>
-                        </h1>
-                    </div>
-                </div>
+        <div className="p-5 max-w-6xl mx-auto pb-12">
 
-                <div className="flex items-center gap-3">
-                    <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-3">
-                        <div className="flex flex-col items-end">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Pending Pool</span>
-                            <span className="text-sm font-black text-indigo-600 leading-none mt-1 italic">{unassignedSchools.length}</span>
-                        </div>
-                        <div className="w-px h-6 bg-slate-100" />
-                        <Users size={16} className="text-slate-300" />
-                    </div>
+            {/* ── Page Header ── */}
+            <div className="flex items-center gap-3 mb-6">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <div>
+                    <h1 className="text-lg font-semibold text-gray-900">Assign Leads</h1>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        {unassignedSchools.length} school{unassignedSchools.length !== 1 ? "s" : ""} waiting to be assigned
+                    </p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                
-                {/* Deployment Command Form */}
-                <div className="lg:col-span-12 xl:col-span-8 space-y-5">
-                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm overflow-hidden border-b-2 border-b-indigo-500/20">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shadow-sm">
-                                    <UserPlus size={14} strokeWidth={2.5} />
-                                </div>
-                                <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Delegation Command</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                {/* ── Left: Assignment Form ── */}
+                <div className="lg:col-span-2 space-y-4">
+
+                    {/* Form Card */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                <UserPlus size={14} className="text-indigo-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-semibold text-gray-800">Assign a Lead</h2>
+                                <p className="text-xs text-gray-400">Pick a school, choose an agent and set the date</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAssign} className="p-5 space-y-4">
+
+                            {/* School Select */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                                    School <span className="text-red-400">*</span>
+                                </label>
+                                <select
+                                    required
+                                    value={formData.school_id}
+                                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all"
+                                >
+                                    <option value="">— Select a school —</option>
+                                    {unassignedSchools.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.school_name}{s.city ? ` — ${s.city}` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                                {unassignedSchools.length === 0 && (
+                                    <p className="text-xs text-amber-500 mt-1.5 flex items-center gap-1">
+                                        <Info size={11} /> All schools are already assigned.
+                                    </p>
+                                )}
                             </div>
 
-                            <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
-                                <div className="md:col-span-2">
-                                    <Field label="School Selection (Unassigned Pool)">
-                                        <div className="relative group">
-                                            <select 
-                                                className={`${inputCls} appearance-none pr-12`}
-                                                value={formData.school_id}
-                                                onChange={e => setFormData({...formData, school_id: e.target.value})}
-                                                required
+                            {/* Agent Select */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                                    Assign To (Agent) <span className="text-red-400">*</span>
+                                </label>
+                                <select
+                                    required
+                                    value={formData.agent_id}
+                                    onChange={(e) => setFormData({ ...formData, agent_id: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all"
+                                >
+                                    <option value="">— Select an agent —</option>
+                                    {agents.map((a) => (
+                                        <option key={a.id} value={a.id}>
+                                            {a.full_name} ({a.role})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Date */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                                    Assigned Date
+                                </label>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <input
+                                        type="date"
+                                        value={formData.assigned_date}
+                                        onChange={(e) => setFormData({ ...formData, assigned_date: e.target.value })}
+                                        className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Preview of selection */}
+                            {(selectedSchool || selectedAgent) && (
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 space-y-1.5">
+                                    <p className="text-xs font-semibold text-indigo-700 mb-2">Assignment Summary</p>
+                                    {selectedSchool && (
+                                        <div className="flex items-center gap-2 text-xs text-indigo-700">
+                                            <Building2 size={12} className="shrink-0" />
+                                            <span className="font-medium">{selectedSchool.school_name}</span>
+                                            {selectedSchool.city && <span className="text-indigo-400">· {selectedSchool.city}</span>}
+                                        </div>
+                                    )}
+                                    {selectedAgent && (
+                                        <div className="flex items-center gap-2 text-xs text-indigo-700">
+                                            <ArrowRight size={12} className="shrink-0" />
+                                            <span className="font-medium">{selectedAgent.full_name}</span>
+                                            <span className="text-indigo-400">· {selectedAgent.role}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                disabled={loading || !formData.school_id || !formData.agent_id}
+                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-all shadow-sm"
+                            >
+                                {loading ? (
+                                    <><Loader2 size={15} className="animate-spin" /> Assigning...</>
+                                ) : (
+                                    <><CheckCircle size={15} /> Assign Lead</>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* ── Agent Summary Cards ── */}
+                    {agents.length > 0 && (
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                    <TrendingUp size={14} className="text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-semibold text-gray-800">Agent Workload</h2>
+                                    <p className="text-xs text-gray-400">How many leads each agent currently has</p>
+                                </div>
+                            </div>
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {agents.map((agent) => {
+                                    const count = schools.filter((s) => s.assigned_to === agent.id).length;
+                                    const pct = Math.min((count / 10) * 100, 100);
+                                    return (
+                                        <div
+                                            key={agent.id}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${formData.agent_id == agent.id ? "border-indigo-300 bg-indigo-50" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"}`}
+                                        >
+                                            <div 
+                                                onClick={() => setFormData((f) => ({ ...f, agent_id: agent.id }))}
+                                                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs font-bold shrink-0 border border-gray-200 cursor-pointer"
                                             >
-                                                <option value="" className="text-slate-400">Initialize school search...</option>
-                                                {unassignedSchools.map(s => (
-                                                    <option key={s.id} value={s.id} className="font-bold py-2">
-                                                        {s.school_name} &mdash; {s.city || 'Regional'}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400 transition-colors pointer-events-none">
-                                                <School size={18} />
+                                                {agent.full_name?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <p className="text-xs font-semibold text-gray-800 truncate">{agent.full_name}</p>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); navigate(`/marketing/agent-analytics/${agent.id}`); }}
+                                                        className="p-1 rounded-md hover:bg-white text-gray-400 hover:text-indigo-600 transition-colors"
+                                                        title="View Analytics"
+                                                    >
+                                                        <BarChart3 size={12} />
+                                                    </button>
+                                                </div>
+                                                <div 
+                                                    onClick={() => setFormData((f) => ({ ...f, agent_id: agent.id }))}
+                                                    className="cursor-pointer"
+                                                >
+                                                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all ${pct > 80 ? "bg-emerald-500" : pct > 40 ? "bg-indigo-500" : "bg-amber-400"}`}
+                                                            style={{ width: `${pct}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-0.5">
+                                                        <p className="text-[10px] text-gray-400">{agent.role}</p>
+                                                        <span className="text-[10px] font-bold text-indigo-600">{count} leads</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </Field>
-                                </div>
-
-                                <Field label="Operational Agent">
-                                    <div className="relative group">
-                                        <select 
-                                            className={`${inputCls} appearance-none pr-12`}
-                                            value={formData.agent_id}
-                                            onChange={e => setFormData({...formData, agent_id: e.target.value})}
-                                            required
-                                        >
-                                            <option value="">Select active agent...</option>
-                                            {agents.map(a => (
-                                                <option key={a.id} value={a.id} className="font-bold">
-                                                    {a.full_name} &bull; {a.role.toUpperCase()}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400 transition-colors pointer-events-none">
-                                            <Briefcase size={18} />
-                                        </div>
-                                    </div>
-                                </Field>
-
-                                <Field label="Deployment Date">
-                                    <div className="relative group">
-                                        <input 
-                                            type="date"
-                                            className={`${inputCls} pr-12 uppercase`}
-                                            value={formData.assigned_date}
-                                            onChange={e => setFormData({...formData, assigned_date: e.target.value})}
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400 transition-colors pointer-events-none">
-                                            <Calendar size={18} />
-                                        </div>
-                                    </div>
-                                </Field>
-
-                                <div className="md:col-span-2 pt-4">
-                                    <button 
-                                        disabled={loading || !formData.school_id || !formData.agent_id}
-                                        type="submit"
-                                        className="w-full bg-slate-900 hover:bg-indigo-600 disabled:bg-slate-100 disabled:text-slate-400 text-white font-black uppercase tracking-widest italic py-4 rounded-2xl shadow-xl shadow-slate-900/10 hover:shadow-indigo-500/20 transition-all duration-500 flex items-center justify-center gap-3 active:scale-[0.98]"
-                                    >
-                                        {loading ? (
-                                            <><Loader2 size={16} className="animate-spin" /> Initializing Deployment...</>
-                                        ) : (
-                                            <><CheckCircle size={16} strokeWidth={3} /> Execute Assignment</>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Regional Pool Monitor */}
-                <div className="lg:col-span-12 xl:col-span-4 space-y-6">
-                    <div className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm flex flex-col h-full max-h-[600px]">
-                        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col gap-4">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Regional Monitor</h4>
-                                {searchTerm && <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{filteredPool.length} Match</span>}
+                {/* ── Right: Unassigned Schools Panel ── */}
+                <div className="space-y-4">
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col" style={{ maxHeight: "520px" }}>
+                        <div className="px-4 py-3.5 border-b border-gray-100">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h2 className="text-sm font-semibold text-gray-800">Unassigned Schools</h2>
+                                    <p className="text-xs text-gray-400">{unassignedSchools.length} schools waiting</p>
+                                </div>
+                                {searchTerm && (
+                                    <span className="text-xs bg-indigo-50 text-indigo-600 font-medium px-2 py-0.5 rounded-full">
+                                        {filteredPool.length} found
+                                    </span>
+                                )}
                             </div>
                             <div className="relative">
-                                <input 
-                                    type="text" 
-                                    placeholder="SEARCH POOL..."
-                                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-10 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by name or city..."
                                     value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-8 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 outline-none focus:border-indigo-400 focus:bg-white transition-all"
                                 />
-                                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm("")}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
                             </div>
                         </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {filteredPool.length === 0 ? (
-                                <div className="py-20 text-center flex flex-col items-center opacity-20 italic">
-                                    <Building2 size={32} className="mb-3" strokeWidth={1.5} />
-                                    <p className="text-[11px] font-black uppercase tracking-widest">Pool Clear</p>
+                                <div className="flex flex-col items-center justify-center py-16 text-gray-300">
+                                    <Building2 size={28} strokeWidth={1.5} className="mb-2" />
+                                    <p className="text-xs font-medium text-gray-400">
+                                        {searchTerm ? "No schools match your search" : "All schools are assigned"}
+                                    </p>
                                 </div>
                             ) : (
-                                filteredPool.map(s => (
-                                    <div 
-                                        key={s.id} 
-                                        onClick={() => setFormData(prev => ({ ...prev, school_id: s.id }))}
-                                        className={`group cursor-pointer p-4 rounded-[20px] transition-all duration-300 flex items-center justify-between
-                                                  ${formData.school_id === s.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-100'}`}
-                                    >
-                                        <div className="min-w-0 pr-4">
-                                            <p className={`text-[11px] font-black uppercase tracking-tight italic truncate transition-colors ${formData.school_id === s.id ? 'text-white' : 'text-slate-800'}`}>
-                                                {s.school_name}
-                                            </p>
-                                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${formData.school_id === s.id ? 'text-indigo-100' : 'text-slate-400'}`}>
-                                                {s.city || 'Regional'}
-                                            </p>
-                                        </div>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${formData.school_id === s.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-100'}`}>
-                                            <ArrowRight size={14} strokeWidth={3} />
-                                        </div>
-                                    </div>
-                                ))
+                                filteredPool.map((s) => {
+                                    const isSelected = formData.school_id == s.id;
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => setFormData((f) => ({ ...f, school_id: s.id }))}
+                                            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left transition-all ${
+                                                isSelected
+                                                    ? "bg-indigo-600 text-white"
+                                                    : "hover:bg-gray-50 text-gray-700"
+                                            }`}
+                                        >
+                                            <div className="min-w-0">
+                                                <p className={`text-xs font-semibold truncate ${isSelected ? "text-white" : "text-gray-800"}`}>
+                                                    {s.school_name}
+                                                </p>
+                                                <p className={`text-[10px] mt-0.5 ${isSelected ? "text-indigo-200" : "text-gray-400"}`}>
+                                                    {s.city || "—"}
+                                                </p>
+                                            </div>
+                                            {isSelected && <CheckCircle size={14} className="shrink-0 text-indigo-200" />}
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
 
-                    <div className="p-6 bg-indigo-50 rounded-[32px] border border-indigo-100">
-                        <div className="flex gap-4">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 text-white shadow-lg shadow-indigo-500/20">
-                                <Info size={14} strokeWidth={3} />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest leading-none">Protocol Info</p>
-                                <p className="text-[10px] text-indigo-700/70 font-bold uppercase tracking-tight leading-relaxed mt-1">
-                                    Assigned leads are exclusive to agents for 90 days.
-                                </p>
-                            </div>
-                        </div>
+                    {/* Info Note */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex gap-3">
+                        <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-blue-600">
+                            Once assigned, a lead is exclusive to that agent.
+                            You can reassign it anytime from the school's detail page.
+                        </p>
                     </div>
                 </div>
 
-            </div>
-
-            {/* Operational Intelligence - Agent Stats */}
-            <div className="mt-10 pt-10 border-t border-slate-100">
-                <div className="flex items-center gap-2 mb-6">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-sm">
-                        <TrendingUp size={14} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic leading-none">Intelligence Report</span>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight italic mt-0.5">Agent Operational Progress</h3>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {agents.map(agent => {
-                        const assignedLeads = schools.filter(s => s.assigned_to === agent.id).length;
-                        const percentage = Math.min((assignedLeads / 10) * 100, 100); // Sample goal of 10
-                        
-                        return (
-                            <div key={agent.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 font-black text-[10px] uppercase">
-                                            {agent.full_name?.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight italic truncate max-w-[100px] leading-none">
-                                                {agent.full_name}
-                                            </p>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-none">
-                                                Active Force
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-xs font-black text-indigo-600 italic leading-none">{assignedLeads}</span>
-                                        <p className="text-[8px] font-black text-slate-300 uppercase leading-none mt-1">Leads</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between items-center text-[8px] font-black uppercase text-slate-400 tracking-widest">
-                                        <span>Quota Utilization</span>
-                                        <span className={percentage > 80 ? 'text-emerald-500' : 'text-slate-400'}>{Math.round(percentage)}%</span>
-                                    </div>
-                                    <div className="h-1.5 bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-1000 ${percentage > 80 ? 'bg-emerald-500' : percentage > 40 ? 'bg-indigo-500' : 'bg-amber-500'}`}
-                                            style={{ width: `${percentage}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
             </div>
         </div>
     );
 }
-

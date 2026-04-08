@@ -5,7 +5,7 @@ import {
     Paperclip, ShieldAlert, History, FileText
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiGetTicketById, apiUpdateTicket } from "../../utils/api";
+import { apiGetTicketById, apiUpdateTicket, BACKEND_URL } from "../../utils/api";
 import { useToast } from "../../components/common/Toast";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -164,7 +164,7 @@ export default function TicketDetails() {
                                     {ticket.attachments.map(att => (
                                         <a
                                             key={att.id}
-                                            href={`http://localhost:5001${att.file_path}`}
+                                            href={`${BACKEND_URL}${att.file_path}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group"

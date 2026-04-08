@@ -5,8 +5,9 @@ import {
     Phone, Mail, MapPin, User, Calendar, 
     MessageSquare, ChevronLeft, CheckCircle, 
     History, TrendingUp, Info, Edit3, Loader2, Target,
-    Clock, Building2, ExternalLink
+    Clock, Building2, ExternalLink, ShoppingCart
 } from "lucide-react";
+
 import { useToast } from "../../components/common/Toast";
 
 const STATUS_COLORS = {
@@ -131,12 +132,21 @@ export default function SchoolDetail() {
                 </div>
 
                 <div className="flex items-center gap-2 relative z-10">
+                    {school.status === 'closed' && (
+                        <button 
+                            onClick={() => navigate(`/marketing/order-booking?school_id=${school.id}`)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-100"
+                        >
+                            <ShoppingCart size={13} /> Create Order
+                        </button>
+                    )}
                     <button 
                         onClick={() => navigate(`/marketing/edit/${school.id}`)}
                         className="flex items-center gap-1.5 px-3 py-2 bg-white text-gray-600 hover:text-indigo-600 border border-gray-200 rounded-lg text-xs font-bold transition-all hover:border-indigo-100 shadow-sm"
                     >
                         <Edit3 size={13} /> Edit Profile
                     </button>
+
                     <button 
                         onClick={() => navigate(`/marketing/visits?school_id=${school.id}`)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-100"
